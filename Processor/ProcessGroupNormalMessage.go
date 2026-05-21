@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
@@ -19,6 +20,18 @@ import (
 
 // ProcessGroupNormalMessage 处理普通群消息（无需 @）
 func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) error {
+	// ------ 新增 start ------
+	// 检查是否 @ 了机器人，如果是，则直接按群at消息处理
+	for _, mention := range data.Mentions {
+		if mention.IsYou {
+			mylog.Printf("普通群消息检测到@机器人，转发至ProcessGroupMessage处理")
+			// 将数据转为 WSGroupATMessageData（两者底层都是 Message，可直接转换）
+			atData := (*dto.WSGroupATMessageData)(unsafe.Pointer(data))
+			return p.ProcessGroupMessage(atData)
+		}
+	}
+	// ------ 新增 end ------
+
 	s := client.GetGlobalS()
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 	currentTimeMillis := time.Now().UnixNano() / 1e6
@@ -163,7 +176,9 @@ func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) err
 				Area:   "0",
 				Level:  "0",
 			},
+			// ------ 修改 start ------
 			SubType: "normal",
+			// ------ 修改 end ------
 			Time:    time.Now().Unix(),
 		}
 		if !config.GetNativeOb11() {
@@ -231,7 +246,9 @@ func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) err
 				Area:   imgurl,
 				Level:  "0",
 			},
+			// ------ 修改 start ------
 			SubType:  "normal",
+			// ------ 修改 end ------
 			Time:     time.Now().Unix(),
 			Platform: platform,
 		}
