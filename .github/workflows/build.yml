@@ -50,6 +50,13 @@ jobs:
         run: |
           cp -r frontend/dist webui/
 
+      - name: Clean up embedded webui
+        run: |
+          # 删除 source map 文件，减小嵌入体积
+          find webui/dist -type f -name "*.map" -delete
+          # 移除无关文件
+          find webui/dist -type f \( -name ".gitkeep" -o -name ".gitignore" \) -delete
+
       - name: Download Go dependencies
         run: go mod tidy
 
@@ -58,7 +65,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -ldflags="-s -w" -v -o gensokyo-${{ matrix.os }}${{ matrix.ext }} .
+          go build -trimpath -ldflags="-s -w" -v -o gensokyo-${{ matrix.os }}${{ matrix.ext }} .
 
       - name: Install UPX
         run: sudo apt-get install -y upx-ucl
