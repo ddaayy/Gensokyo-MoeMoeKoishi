@@ -1,0 +1,46 @@
+name: Build Gensokyo (Multi-Platform)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            goos: linux
+            goarch: amd64
+            ext: ""
+          - os: windows
+            goos: windows
+            goarch: amd64
+            ext: ".exe"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Download dependencies
+        run: go mod tidy
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -v -o gensokyo-${{ matrix.os }}${{ matrix.ext }} .
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: gensokyo-${{ matrix.os }}
+          path: gensokyo-${{ matrix.os }}${{ matrix.ext }}
