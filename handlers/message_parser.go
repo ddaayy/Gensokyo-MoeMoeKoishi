@@ -1066,6 +1066,8 @@ func RevertTransformedText(data interface{}, msgtype string, api openapi.OpenAPI
 	switch v := data.(type) {
 	case *dto.WSGroupATMessageData:
 		msg = (*dto.Message)(v)
+	case *dto.WSGroupMessageData:
+    	msg = (*dto.Message)(v)
 	case *dto.WSATMessageData:
 		msg = (*dto.Message)(v)
 	case *dto.WSMessageData:
@@ -1430,6 +1432,8 @@ func ConvertToSegmentedMessage(data interface{}) []map[string]interface{} {
 	case *dto.Message:
 		msg = v // 直接赋值，因为v已经是*dto.Message类型
 	case *dto.WSGroupATMessageData:
+		msg = (*dto.Message)(v)
+	case *dto.WSGroupMessageData:
 		msg = (*dto.Message)(v)
 	case *dto.WSATMessageData:
 		msg = (*dto.Message)(v)
