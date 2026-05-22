@@ -238,8 +238,8 @@ todo,正在施工中
 </details>
 
 
-<summary>目前支持的 Intent</summary>
 <details>
+<summary>目前支持的 Intent</summary>
 
 
 | 事件名称 | 代表含义 |
