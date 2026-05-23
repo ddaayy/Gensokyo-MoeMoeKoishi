@@ -1734,7 +1734,33 @@ func parseMDData(mdData []byte) (*dto.Markdown, *keyboard.MessageKeyboard, error
 		}
 	}
 
+	// 自动转换 keyboard 中的虚拟ID为QQ官方OpenID
+	if kb != nil {
+		ResolveKeyboardVirtualIDs(kb)
+	}
+
 	return md, kb, nil
+}
+
+// ResolveKeyboardVirtualIDs 遍历 keyboard 中的所有按钮，将 specify_user_ids
+// 中的数字虚拟ID自动转换为QQ官方OpenID，确保QQ API能正确识别权限用户。
+func ResolveKeyboardVirtualIDs(kb *keyboard.MessageKeyboard) {
+	if kb == nil || kb.Content == nil {
+		return
+	}
+	for _, row := range kb.Content.Rows {
+		if row == nil {
+			continue
+		}
+		for _, btn := range row.Buttons {
+			if btn == nil || btn.Action == nil || btn.Action.Permission == nil {
+				continue
+			}
+			for i, uid := range btn.Action.Permission.SpecifyUserIDs {
+				btn.Action.Permission.SpecifyUserIDs[i] = idmap.ResolveOriginalID(uid)
+			}
+		}
+	}
 }
 
 func parseQQMuiscMDData(musicid string) (*dto.Markdown, *keyboard.MessageKeyboard, error) {
