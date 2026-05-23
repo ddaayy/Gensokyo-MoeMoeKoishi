@@ -1844,3 +1844,47 @@ func ListAllUsers() ([]structs.FriendData, error) {
 	}
 	return users, nil
 }
+
+// ResolveOriginalID 将一个可能是虚拟ID的字符串解析为原始QQ官方OpenID。
+// 如果 idStr 是纯数字（虚拟ID），则通过反向查询获取原始 OpenID；
+// 如果不是数字或查询失败，则原样返回。
+// 场景：QQ按钮 action.data 中可能嵌入了数字虚拟ID，点击后客户端输入该ID，
+// 需要反向解析为QQ官方OpenID才能正常调用QQ API。
+func ResolveOriginalID(idStr string) string {
+	// 尝试解析为 int64（判断是否为数字虚拟ID）
+	virtualID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		// 不是数字，直接返回原始字符串（可能是原始OpenID或其他文本）
+		return idStr
+	}
+
+	// 尝试反向查询
+	_, realID, err := RetrieveRealValuev2(virtualID)
+	if err != nil || realID == "" {
+		// 反向查询失败，原样返回
+		return idStr
+	}
+
+	return realID
+}
+
+// ResolveOriginalIDs 批量解析虚拟ID列表，将每个可能的虚拟ID替换为原始OpenID。
+func ResolveOriginalIDs(ids []string) []string {
+	result := make([]string, len(ids))
+	for i, id := range ids {
+		result[i] = ResolveOriginalID(id)
+	}
+	return result
+}
+
+// ResolveOriginalIDInText 将文本中所有疑似数字虚拟ID的片段尝试解析为原始OpenID。
+// 适用于从按钮 action.data 或消息内容中提取ID的场景。
+func ResolveOriginalIDInText(text string) string {
+	// 按空格分割，尝试解析每个token
+	tokens := strings.Fields(text)
+	for i, token := range tokens {
+		resolved := ResolveOriginalID(token)
+		tokens[i] = resolved
+	}
+	return strings.Join(tokens, " ")
+}
