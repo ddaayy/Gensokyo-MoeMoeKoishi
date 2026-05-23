@@ -18,20 +18,9 @@ import (
 )
 
 // ProcessGroupNormalMessage 处理普通群消息（无需 @）
+// 注意：QQ平台对 GROUP_MESSAGE_CREATE 事件的 Content 中可能包含 <@xxx> 原文，
+// 后续 RevertTransformedText 会统一处理这些 @ 格式转换，此处无需手动剥离。
 func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) error {
-	// ------ 新增 start ------
-	// 检查是否 @ 了机器人，如果是，直接从 content 中移除对应的 <@...> 文本
-	for _, mention := range data.Mentions {
-		if mention.IsYou {
-			// 移除 content 中的 <@机器人OpenID> 及其前后空格
-			data.Content = strings.TrimSpace(
-				strings.Replace(data.Content, "<@"+mention.ID+">", "", 1),
-			)
-			break
-		}
-	}
-	// ------ 新增 end ------
-
 	s := client.GetGlobalS()
 	AppIDString := strconv.FormatUint(p.Settings.AppID, 10)
 	currentTimeMillis := time.Now().UnixNano() / 1e6
