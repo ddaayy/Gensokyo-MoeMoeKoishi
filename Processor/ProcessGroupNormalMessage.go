@@ -3,6 +3,7 @@ package Processor
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -77,10 +78,12 @@ func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) err
 
 	// 前置兼容：从 data.Content 中移除 bot 自己的 @，避免 RevertTransformedText
 	// 中 BotID→AppID 替换后导致 userID==BotID 判断失效，误将 bot 自身 @ 当作普通用户映射。
-	// QQ平台在 GROUP_MESSAGE_CREATE 的 Content 中使用 AppID 数字格式 <@AppID>，
-	// 而 handlers.BotID 为 OpenID 格式，需要同时处理两种格式。
-	data.Content = strings.ReplaceAll(data.Content, "<@"+handlers.BotID+">", "")
-	data.Content = strings.ReplaceAll(data.Content, "<@"+AppIDString+">", "")
+	// QQ平台在 GROUP_MESSAGE_CREATE 的 Content 中可能使用 <@BotID> / <@!BotID> / <@AppID>
+	// 等多种格式，用正则统一处理。
+	reBot := regexp.MustCompile(`<@!?` + regexp.QuoteMeta(handlers.BotID) + `>`)
+	data.Content = reBot.ReplaceAllString(data.Content, "")
+	reApp := regexp.MustCompile(`<@!?` + regexp.QuoteMeta(AppIDString) + `>`)
+	data.Content = reApp.ReplaceAllString(data.Content, "")
 	data.Content = strings.TrimSpace(data.Content)
 
 	messageText := data.Content
