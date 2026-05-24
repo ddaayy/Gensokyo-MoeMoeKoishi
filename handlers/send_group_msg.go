@@ -1888,6 +1888,13 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 			mylog.Printf("failed to parseMDData: %v", err)
 			return nil
 		}
+
+		// 替换 keyboard 中 __USER_ID__ 占位符为实际用户 OpenID
+		if keyboard != nil {
+			userOpenID := idmap.ResolveOriginalID(userid)
+			ResolvePlaceholderUserIDs(keyboard, userOpenID)
+		}
+
 		return &dto.MessageToCreate{
 			Content:  "markdown",
 			MsgID:    id,

@@ -1763,6 +1763,29 @@ func ResolveKeyboardVirtualIDs(kb *keyboard.MessageKeyboard) {
 	}
 }
 
+// ResolvePlaceholderUserIDs 将 keyboard 中 specify_user_ids 的 __USER_ID__
+// 占位符替换为实际的用户 OpenID，确保 QQ API 能正确识别权限用户。
+func ResolvePlaceholderUserIDs(kb *keyboard.MessageKeyboard, realUserOpenID string) {
+	if kb == nil || kb.Content == nil || realUserOpenID == "" {
+		return
+	}
+	for _, row := range kb.Content.Rows {
+		if row == nil {
+			continue
+		}
+		for _, btn := range row.Buttons {
+			if btn == nil || btn.Action == nil || btn.Action.Permission == nil {
+				continue
+			}
+			for i, uid := range btn.Action.Permission.SpecifyUserIDs {
+				if uid == "__USER_ID__" {
+					btn.Action.Permission.SpecifyUserIDs[i] = realUserOpenID
+				}
+			}
+		}
+	}
+}
+
 func parseQQMuiscMDData(musicid string) (*dto.Markdown, *keyboard.MessageKeyboard, error) {
 	info, err := QQMusicSongInfo(musicid)
 	if err != nil {
