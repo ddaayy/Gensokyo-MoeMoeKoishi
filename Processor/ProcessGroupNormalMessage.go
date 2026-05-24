@@ -76,14 +76,16 @@ func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) err
 		}
 	}
 
-	// 前置兼容：从 data.Content 中移除 bot 自己的 @，避免 RevertTransformedText
-	// 中 BotID→AppID 替换后导致 userID==BotID 判断失效，误将 bot 自身 @ 当作普通用户映射。
-	// QQ平台在 GROUP_MESSAGE_CREATE 的 Content 中可能使用 <@BotID> / <@!BotID> / <@AppID>
-	// 等多种格式，用正则统一处理。
-	reBot := regexp.MustCompile(`<@!?` + regexp.QuoteMeta(handlers.BotID) + `>`)
-	data.Content = reBot.ReplaceAllString(data.Content, "")
-	reApp := regexp.MustCompile(`<@!?` + regexp.QuoteMeta(AppIDString) + `>`)
-	data.Content = reApp.ReplaceAllString(data.Content, "")
+	// 前置兼容：遍历 Mentions 数组，移除 bot 自己的 <@OpenID> / <@!OpenID>
+	// QQ 平台在 GROUP_MESSAGE_CREATE 中使用 OpenID 格式标识被 @ 的用户，
+	// 与 handlers.BotID（来自 Ready 事件）不同，必须从 Mentions 中获取真实 ID。
+	for _, mention := range data.Mentions {
+		if mention.IsYou {
+			reMention := regexp.MustCompile(`<@!?` + regexp.QuoteMeta(mention.ID) + `>`)
+			data.Content = reMention.ReplaceAllString(data.Content, "")
+			break
+		}
+	}
 	data.Content = strings.TrimSpace(data.Content)
 
 	messageText := data.Content
