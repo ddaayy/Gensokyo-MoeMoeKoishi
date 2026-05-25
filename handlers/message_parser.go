@@ -703,23 +703,22 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			case "embed":
 				embedContent, ok := segmentMap["data"].(map[string]interface{})["data"]
 				if ok {
-					var embedDataBytes []byte
 					if embedContentMap, isMap := embedContent.(map[string]interface{}); isMap {
-						embedDataBytes, err = json.Marshal(embedContentMap)
+						embedDataBytes, err := json.Marshal(embedContentMap)
 						if err != nil {
 							mylog.Printf("Error marshaling embed data: %v", err)
 							continue
 						}
+						foundItems["embed"] = append(foundItems["embed"], base64.StdEncoding.EncodeToString(embedDataBytes))
 					} else if embedContentStr, isString := embedContent.(string); isString {
 						if strings.HasPrefix(embedContentStr, "base64://") {
 							embedContentStr = strings.TrimPrefix(embedContentStr, "base64://")
 						}
-						embedDataBytes = []byte(embedContentStr)
+						foundItems["embed"] = append(foundItems["embed"], base64.StdEncoding.EncodeToString([]byte(embedContentStr)))
 					} else {
 						mylog.Printf("Error: embed data wrong type.")
 						continue
 					}
-					foundItems["embed"] = append(foundItems["embed"], base64.StdEncoding.EncodeToString(embedDataBytes))
 				} else {
 					mylog.Printf("Error: embed segment data is nil.")
 				}
@@ -854,21 +853,20 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		case "embed":
 			embedContent, ok := message["data"].(map[string]interface{})["data"]
 			if ok {
-				var embedDataBytes []byte
 				if embedContentMap, isMap := embedContent.(map[string]interface{}); isMap {
-					embedDataBytes, err = json.Marshal(embedContentMap)
+					embedDataBytes, err := json.Marshal(embedContentMap)
 					if err != nil {
 						mylog.Printf("Error marshaling embed data: %v", err)
 					}
+					foundItems["embed"] = append(foundItems["embed"], base64.StdEncoding.EncodeToString(embedDataBytes))
 				} else if embedContentStr, isString := embedContent.(string); isString {
 					if strings.HasPrefix(embedContentStr, "base64://") {
 						embedContentStr = strings.TrimPrefix(embedContentStr, "base64://")
 					}
-					embedDataBytes = []byte(embedContentStr)
+					foundItems["embed"] = append(foundItems["embed"], base64.StdEncoding.EncodeToString([]byte(embedContentStr)))
 				} else {
 					mylog.Printf("Error: embed data wrong type.")
 				}
-				foundItems["embed"] = append(foundItems["embed"], base64.StdEncoding.EncodeToString(embedDataBytes))
 			} else {
 				mylog.Printf("Error: embed segment data is nil.")
 			}
