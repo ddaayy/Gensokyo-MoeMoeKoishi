@@ -8,7 +8,7 @@
 {
     "data": {
         "message": "https://q.qlogo.cn/qqapp/102848039/[QQ官方虚拟ID]/640",
-        "user_id": 经Gsk转化后的数字id
+        "user_id": 1234567890
     },
     "message": "",
     "retcode": 0,
