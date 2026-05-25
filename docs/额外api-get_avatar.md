@@ -7,8 +7,8 @@
 ```json
 {
     "data": {
-        "message": "https://q.qlogo.cn/qqapp/102848039/D8FB64288B16F160289247BA495B7233/640",
-        "user_id": 3429630094
+        "message": "https://q.qlogo.cn/qqapp/102848039/[QQ官方虚拟ID]/640",
+        "user_id": 经Gsk转化后的数字id
     },
     "message": "",
     "retcode": 0,
