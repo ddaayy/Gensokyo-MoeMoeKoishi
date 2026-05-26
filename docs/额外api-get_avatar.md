@@ -23,8 +23,7 @@
 ```json
 {
     "data": {
-        "message": "https://q.qlogo.cn/qqapp/[Bot实际的app_id]/[QQ下发的虚拟用户ID]/640",
-        // user_id为Gensokyo向后端返回的虚拟QQ号
+        "message": "https://q.qlogo.cn/qqapp/987654321/ABCDEFGHIJKLMNOPQRSTUVWXYZ123456/640",
         "user_id": 1234567890
     },
     "message": "",
