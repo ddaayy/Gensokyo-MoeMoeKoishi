@@ -92,7 +92,8 @@ Gensokyo 是一款兼容 [OneBot V11](https://github.com/botuniverse/onebot-11) 
 <details>
 <summary>展开查看</summary>
 
-> 新增了 **[CQ:avatar]** 头像获取
+> 新增了如下 **CQ码**
+> **[CQ:avatar]** 头像获取
 
 #### 符合 OneBot 标准的 CQ 码
 
@@ -129,7 +130,11 @@ todo,正在施工中
 <details>
 <summary>已实现 API</summary>
 
-> 新增了 **get_avatar**（头像直链）、**get_robot_share_link**（分享链接）、**send_private_msg_wakeup**（被动唤醒）、**put_interaction**（按钮回调）
+> 新增了如下 **API**
+> **get_avatar**（头像直链）
+> **get_robot_share_link**（分享链接）
+> **send_private_msg_wakeup**（被动唤醒）
+> **put_interaction**（按钮回调）
 
 #### 符合 OneBot 标准的 API
 
@@ -189,7 +194,11 @@ todo,正在施工中
 <details>
 <summary>已实现 Event</summary>
 
-> 新增了 **friend_decrease**（好友删除）、**group_reject/group_receive**（群推送开关）、**interaction**（按钮回调）、**c2c_msg_reject/c2c_msg_receive**（C2C推送开关）
+> 新增了如下 **Event**
+> **friend_decrease**（好友删除）
+> **group_reject/group_receive**（群推送开关）
+> **interaction**（按钮回调）
+> **c2c_msg_reject/c2c_msg_receive**（C2C推送开关）
 
 #### 符合 OneBot 标准的 Event（部分 Event 比 OneBot 标准多上报几个字段，不影响使用）
 
@@ -234,7 +243,8 @@ todo,正在施工中
 <summary>已实现 Intent</summary>
 
 #### 允许向后端推送的事件类型
-> 新增了 **GroupMessageEventHandler**（非@群消息）事件
+> 新增了
+> **GroupMessageEventHandler**（非@群消息）事件
 
 | 事件名称                   | 代表含义                         |
 | --------------------------- | ------------------------------- |
