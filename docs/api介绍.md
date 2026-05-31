@@ -114,9 +114,26 @@ event.json()  # 查看完整字段
 出站（后端 → QQ API）:
   后端发送: [CQ:at,qq=713011248] 贴贴
   QQ API:   <@!B1FE88...> 贴贴
+```
 
 **规则：**
 - 入站 `@bot` → 从 content 中剥离（`to_me = true`）
 - 入站 `@其他人` → 转为 `[CQ:at,qq=虚拟ID]`
 - 出站 `[CQ:at,qq=数字]` → 转为 `<@!OpenID>`（无论是否为 bot 自身，全部放行）
+
+### Sender.Nickname 自动填充
+
+Gensokyo 在群消息和私聊消息中，当 `card_nick` 配置为空时，会自动从 QQ API 返回的 `data.Author.Username` 中提取用户名填充到 `event.sender.nickname`：
+
+```json
+{
+    "sender": {
+        "nickname": "同道中人",   // ← 自动从 Author.Username 获取
+        "user_id": 610636458,
+        ...
+    }
+}
+```
+
+优先顺序：`card_nick` 配置值 > `Author.Username` > 空
 ```
