@@ -114,4 +114,9 @@ event.json()  # 查看完整字段
 出站（后端 → QQ API）:
   后端发送: [CQ:at,qq=713011248] 贴贴
   QQ API:   <@!B1FE88...> 贴贴
+
+**规则：**
+- 入站 `@bot` → 从 content 中剥离（`to_me = true`）
+- 入站 `@其他人` → 转为 `[CQ:at,qq=虚拟ID]`
+- 出站 `[CQ:at,qq=数字]` → 转为 `<@!OpenID>`（无论是否为 bot 自身，全部放行）
 ```
