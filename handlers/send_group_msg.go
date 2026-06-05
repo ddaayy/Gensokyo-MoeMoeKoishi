@@ -408,9 +408,8 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			messageText = ""
 		}
 
-		// 优先发送文本信息（有 reply 但同时也发 markdown 时，reply 合并到 markdown 里）
-		hasMarkdown := len(foundItems["markdown"]) > 0
-		if messageText != "" || (len(foundItems["reply_msg_id"]) > 0 && !hasMarkdown) {
+		// 优先发送文本信息
+		if messageText != "" {
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
 			groupReply := generateGroupMessage(messageID, eventID, nil, messageText, msgseq+1, apiv2, message.Params.GroupID.(string))
@@ -422,17 +421,12 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				return "", nil // 或其他错误处理
 			}
 
-			// 处理 [CQ:reply,id=数字] → message_reference
-			// QQ API 中 message_reference.message_id 填当前被回复消息的 ID 即可
+			// 处理 [CQ:reply,id=数字] → message_reference（仅当消息实际有内容时才设置）
 			if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
-				if messageID != "" {
+				if messageID != "" && messageText != "" {
 					groupMessage.MessageReference = &dto.MessageReference{
 						MessageID:             messageID,
 						IgnoreGetMessageError: true,
-					}
-					// message_reference 不能带空 content
-					if strings.TrimSpace(groupMessage.Content) == "" {
-						groupMessage.Content = " "
 					}
 				}
 			}
