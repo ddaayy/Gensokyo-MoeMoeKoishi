@@ -422,17 +422,16 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			}
 
 			// 处理 [CQ:reply,id=数字] → message_reference
+			// QQ API 中 message_reference.message_id 填当前被回复消息的 ID 即可
 			if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
-				realReplyID, err := idmap.RetrieveRowByCachev2(replyIDs[0])
-				if err != nil {
-					if cacheID, ok := echo.GetCacheIDFromMemoryByRowID(replyIDs[0]); ok {
-						realReplyID = cacheID
-					}
-				}
-				if realReplyID != "" {
+				if messageID != "" {
 					groupMessage.MessageReference = &dto.MessageReference{
-						MessageID:             realReplyID,
+						MessageID:             messageID,
 						IgnoreGetMessageError: true,
+					}
+					// message_reference 不能带空 content
+					if strings.TrimSpace(groupMessage.Content) == "" {
+						groupMessage.Content = " "
 					}
 				}
 			}
