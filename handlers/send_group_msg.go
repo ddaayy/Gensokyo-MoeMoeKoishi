@@ -409,7 +409,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 		}
 
 		// 优先发送文本信息
-		if messageText != "" {
+		if messageText != "" || len(foundItems["reply_msg_id"]) > 0 {
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
 			groupReply := generateGroupMessage(messageID, eventID, nil, messageText, msgseq+1, apiv2, message.Params.GroupID.(string))
@@ -419,6 +419,22 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if !ok {
 				mylog.Println("Error: Expected MessageToCreate type.")
 				return "", nil // 或其他错误处理
+			}
+
+			// 处理 [CQ:reply,id=数字] → message_reference
+			if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
+				realReplyID, err := idmap.RetrieveCachev2(replyIDs[0])
+				if err != nil {
+					if cacheID, ok := echo.GetCacheIDFromMemoryByRowID(replyIDs[0]); ok {
+						realReplyID = cacheID
+					}
+				}
+				if realReplyID != "" {
+					groupMessage.MessageReference = &dto.MessageReference{
+						MessageID:             realReplyID,
+						IgnoreGetMessageError: true,
+					}
+				}
 			}
 
 			var resp *dto.GroupMessageResponse

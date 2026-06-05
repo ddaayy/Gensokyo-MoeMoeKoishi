@@ -649,6 +649,13 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
 				messageText += "[CQ:at,qq=" + qqNumber + "]"
 
+			case "reply":
+				replyID, _ := segmentMap["data"].(map[string]interface{})["id"].(string)
+				if replyID != "" {
+					foundItems["reply_msg_id"] = append(foundItems["reply_msg_id"], replyID)
+				}
+				messageText += "[CQ:reply,id=" + replyID + "]"
+
 			case "avatar":
 				qqNumber, _ := segmentMap["data"].(map[string]interface{})["qq"].(string)
 				var avatarCQCode string
@@ -833,6 +840,12 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 
 	default:
 		mylog.Println("Unsupported message format: params.message field is not a string, map or slice")
+	}
+
+	// 从 messageText 中提取 [CQ:reply,id=数字] 用于构建 message_reference
+	replyRe := regexp.MustCompile(`\[CQ:reply,id=(\d+)\]`)
+	if matches := replyRe.FindStringSubmatch(messageText); len(matches) > 1 {
+		foundItems["reply_msg_id"] = append(foundItems["reply_msg_id"], matches[1])
 	}
 
 	if paramsMessage.GroupID == nil {
