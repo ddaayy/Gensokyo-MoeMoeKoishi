@@ -9,7 +9,7 @@ Gensokyo 对 OneBot V11 的扩展语法汇总。
 | Markdown | `[CQ:markdown,data=base64]` | Markdown 卡片消息 |
 | 头像 | `[CQ:avatar,qq=数字]` | 在消息中嵌入用户头像图片 |
 | QQ 音乐 | `[CQ:music,type=qq,id=数字]` | 分享 QQ 音乐（自动转为 Markdown 卡片） |
-| 回复 | `[CQ:reply,id=数字]` | 引用回复（发送时自动去除，仅作标记） |
+| 回复 | `[CQ:reply,id=数字]` | 引用回复标记。发送时从文本中自动剥离，若有 MD 卡片则挂载 `message_reference` 一并发送（频道端渲染引用样式，群聊端不渲染） |
 
 ## Message Segment 类型
 
