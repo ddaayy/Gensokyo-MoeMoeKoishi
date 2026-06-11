@@ -151,7 +151,7 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 			singleItem[imageType] = []string{imageUrl}
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			Reply, isbase64 := GenerateReplyMessage(messageID, singleItem, "", msgseq+1)
+			Reply, isbase64 := GenerateReplyMessage(messageID, singleItem, "", msgseq+1, nil)
 			if !isbase64 {
 				// 创建包含文本和base64图像信息的消息
 				msgseq = echo.GetMappingSeq(messageID)
@@ -258,7 +258,7 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		if messageText != "" {
 			msgseq := echo.GetMappingSeq(messageID)
 			echo.AddMappingSeq(messageID, msgseq+1)
-			textMsg, _ := GenerateReplyMessage(messageID, nil, messageText, msgseq+1)
+			textMsg, _ := GenerateReplyMessage(messageID, nil, messageText, msgseq+1, nil)
 			if resp, err = api.PostMessage(context.TODO(), channelID.(string), textMsg); err != nil {
 				mylog.Printf("发送文本信息失败: %v", err)
 			}
