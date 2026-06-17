@@ -238,6 +238,11 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			messageID = GetMessageIDByUseridOrGroupid(config.GetAppIDStr(), message.Params.GroupID)
 			mylog.Println("通过GetMessageIDByUseridOrGroupid函数获取的message_id:", message.Params.GroupID, messageID)
 		}
+		// 主动推送：没有用户上下文时，缓存的 msg_id 已过期，清掉
+		if messageID != "" && (message.Params.UserID == nil || message.Params.UserID.(string) == "" || message.Params.UserID.(string) == "0") && eventID == "" {
+			messageID = ""
+			mylog.Println("主动推送模式，清空缓存的 msg_id")
+		}
 		//开发环境用 1000在群里无效
 		// if config.GetDevMsgID() {
 		// 	messageID = "1000"
@@ -318,7 +323,7 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 					echo.AddMappingSeq(messageID, msgseq+1)
 					groupMessage = &dto.MessageToCreate{
 						Content: messageText, // 添加文本内容
-						Media: dto.Media{
+						Media: &dto.Media{
 							FileInfo: fileInfo, // 添加图像信息
 						},
 						MsgID:   messageID,

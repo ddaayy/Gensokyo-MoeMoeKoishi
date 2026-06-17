@@ -108,7 +108,7 @@ func HandleSendPrivateMsgWakeup(client callapi.Client, api openapi.OpenAPI, apiv
 		// 构造 MessageToCreate
 		groupMessage := &dto.MessageToCreate{
 			Content: messageText,
-			Media: dto.Media{
+			Media: &dto.Media{
 				FileInfo: fileInfo,
 			},
 			MsgType:  7,    // 富媒体类型
