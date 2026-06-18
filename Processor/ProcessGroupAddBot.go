@@ -39,6 +39,7 @@ type GroupNoticeEvent struct {
 	SubType     string `json:"sub_type"`
 	Time        int64  `json:"time"`
 	UserID      int64  `json:"user_id"`
+	Message     string `json:"message,omitempty"`     // CQ 码描述，如 [CQ:member,type=add,user_id=xxx]
 	RealUserID  string `json:"real_user_id,omitempty"`  //当前真实uid
 	RealGroupID string `json:"real_group_id,omitempty"` //当前真实gid
 }

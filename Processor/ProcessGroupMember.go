@@ -1,6 +1,7 @@
 package Processor
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -51,6 +52,12 @@ func (p *Processors) ProcessGroupMember(data *dto.GroupMemberEvent, eventType st
 		timestamp = time.Now().Unix()
 	}
 
+	// CQ 码描述
+	memberCQ := fmt.Sprintf("[CQ:member,type=%s,user_id=%d]", map[string]string{
+		"GROUP_MEMBER_ADD":    "add",
+		"GROUP_MEMBER_REMOVE": "remove",
+	}[eventType], userID)
+
 	switch eventType {
 	case "GROUP_MEMBER_ADD":
 		notice := GroupNoticeEvent{
@@ -61,6 +68,7 @@ func (p *Processors) ProcessGroupMember(data *dto.GroupMemberEvent, eventType st
 			SubType:     "member",
 			Time:        timestamp,
 			UserID:      userID,
+			Message:     memberCQ,
 			RealUserID:  data.MemberOpenID,
 			RealGroupID: data.GroupOpenID,
 		}
@@ -77,6 +85,7 @@ func (p *Processors) ProcessGroupMember(data *dto.GroupMemberEvent, eventType st
 			SubType:     "member",
 			Time:        timestamp,
 			UserID:      userID,
+			Message:     memberCQ,
 			RealUserID:  data.MemberOpenID,
 			RealGroupID: data.GroupOpenID,
 		}
