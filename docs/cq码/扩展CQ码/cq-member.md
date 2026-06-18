@@ -65,6 +65,7 @@ async def handle_member_cq(bot: Bot, event: GroupMessageEvent):
 
     if cq_type == "add":
         # 入群欢迎： [CQ:member] + [CQ:at] + [CQ:markdown] 或文本
+        # [CQ:at] 在 markdown 消息下自动合并到内容（详见 [CQ:at] Markdown 文档）
         reply_msg = Message(
             f"{event.raw_message}"
             f"[CQ:at,qq={event.user_id}]"
