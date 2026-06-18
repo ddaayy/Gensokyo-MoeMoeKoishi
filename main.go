@@ -863,6 +863,22 @@ func C2CMsgReceiveHandler() event.C2CMsgReceiveHandler {
 	}
 }
 
+// GroupMemberAddEventHandler 实现处理 群成员新增 事件的回调
+func GroupMemberAddEventHandler() event.GroupMemberAddEventHandler {
+	return func(event *dto.WSPayload, data *dto.GroupAddBotEvent) error {
+		go p.ProcessGroupMember(data, "GROUP_MEMBER_ADD")
+		return nil
+	}
+}
+
+// GroupMemberRemoveEventHandler 实现处理 群成员移除 事件的回调
+func GroupMemberRemoveEventHandler() event.GroupMemberRemoveEventHandler {
+	return func(event *dto.WSPayload, data *dto.GroupAddBotEvent) error {
+		go p.ProcessGroupMember(data, "GROUP_MEMBER_REMOVE")
+		return nil
+	}
+}
+
 func getHandlerByName(handlerName string) (interface{}, bool) {
 	switch handlerName {
 	case "ReadyHandler": //连接成功
@@ -908,6 +924,10 @@ func getHandlerByName(handlerName string) (interface{}, bool) {
 		return C2CMsgReceiveHandler(), true
 	case "GroupMessageEventHandler": // 普通群消息（无需@）
 		return GroupMessageEventHandler(), true
+	case "GroupMemberAddEventHandler": // 群成员新增
+		return GroupMemberAddEventHandler(), true
+	case "GroupMemberRemoveEventHandler": // 群成员移除
+		return GroupMemberRemoveEventHandler(), true
 	default:
 		log.Printf("Unknown handler: %s\n", handlerName)
 		return nil, false

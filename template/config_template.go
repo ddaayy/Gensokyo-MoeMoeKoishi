@@ -40,8 +40,8 @@ settings:
     # - "FriendAddEventHandler"                      # 用户添加机器人(成为好友)
     # - "FriendDelEventHandler"                      # 用户删除机器人(解除好友)
     # - "C2CMsgRejectHandler"                        # 用户拒绝(关闭)C2C消息推送
-    # - "C2CMsgReceiveHandler"                       # 用户开启(接收)C2C消息推送
-
+    # - "C2CMsgReceiveHandler"                       # 用户开启(接收)C2C消息推送    # - "GroupMemberAddEventHandler"                 # 群成员新增（非文档化事件）
+    # - "GroupMemberRemoveEventHandler"              # 群成员移除（非文档化事件）
   #转换类
   global_channel_to_group: true                      # 是否将频道转换成群 默认true
   global_private_to_channel: false                   # 是否将私聊转换成频道 如果是群场景 会将私聊转为群(方便提审\测试)

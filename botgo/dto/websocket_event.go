@@ -50,6 +50,9 @@ const (
 	EventFriendDel     EventType = "FRIEND_DEL"
 	EventC2CMsgReject  EventType = "C2C_MSG_REJECT"
 	EventC2CMsgReceive EventType = "C2C_MSG_RECEIVE"
+	// [新增] 群成员变动事件（QQ API 未文档化但实际存在）
+	EventGroupMemberAdd    EventType = "GROUP_MEMBER_ADD"
+	EventGroupMemberRemove EventType = "GROUP_MEMBER_REMOVE"
 )
 
 // intentEventMap 不同 intent 对应的事件定义
@@ -68,6 +71,7 @@ var intentEventMap = map[Intent][]EventType{
 		EventGroupMsgReject, EventGroupMsgReceive,
 		EventFriendAdd, EventFriendDel,
 		EventC2CMsgReject, EventC2CMsgReceive,
+		EventGroupMemberAdd, EventGroupMemberRemove, // [新增] 群成员变动
 	},
 
 	IntentGuildMessageReactions: {EventMessageReactionAdd, EventMessageReactionRemove},

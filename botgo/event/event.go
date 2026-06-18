@@ -88,6 +88,10 @@ var eventParseFuncMap = map[dto.OPCode]map[dto.EventType]eventParseFunc{
 		dto.EventFriendDel:     friendDelHandler,
 		dto.EventC2CMsgReject:  c2cMsgRejectHandler,
 		dto.EventC2CMsgReceive: c2cMsgReceiveHandler,
+
+		// [新增] 群成员变动事件（复用群机器人事件处理逻辑）
+		dto.EventGroupMemberAdd:    groupaddbothandler,
+		dto.EventGroupMemberRemove: groupdelbothandler,
 	},
 }
 
