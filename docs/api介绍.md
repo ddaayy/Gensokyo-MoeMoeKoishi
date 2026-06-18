@@ -56,10 +56,10 @@
 
 | Action | 文件 | 说明 |
 |--------|------|------|
-| [`get_avatar`](./扩展api-get_avatar.md) | get_avatar.go | 获取用户头像直链 |
-| `get_robot_share_link` | [get_robot_share_link.go](./扩展api-get_robot_share_link.md) | 获取机器人分享链接 |
-| `put_interaction` | [put_interaction.go](./扩展api-put_interaction.md) | 处理按钮交互回调 |
-| `send_private_msg_wakeup` | [send_private_msg_wakeup.go](./扩展api-send_private_msg_wakeup.md) | 发送被动唤醒私聊消息 |
+| [`get_avatar`](./扩展api/扩展api-get_avatar.md) | get_avatar.go | 获取用户头像直链 |
+| `get_robot_share_link` | [get_robot_share_link.go](./扩展api/扩展api-get_robot_share_link.md) | 获取机器人分享链接 |
+| `put_interaction` | [put_interaction.go](./扩展api/扩展api-put_interaction.md) | 处理按钮交互回调 |
+| `send_private_msg_wakeup` | [send_private_msg_wakeup.go](./扩展api/扩展api-send_private_msg_wakeup.md) | 发送被动唤醒私聊消息 |
 | `send_private_msg_sse` | send_private_msg_sse.go | SSE 私聊消息 |
 | `get_group_ban` | set_group_ban.go | 群组单人禁言（等同于 `set_group_ban`） |
 | `get_group_whole_ban` | set_group_whole_ban.go | 群组全员禁言（等同于 `set_group_whole_ban`） |

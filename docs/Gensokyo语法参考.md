@@ -238,7 +238,7 @@ MD 内: [CQ:at,qq=数字] → <qqbot-at-user id="OpenID" />
 
 | Action | 说明 |
 |--------|------|
-| `get_avatar` | 获取用户头像直链（[文档](./扩展api-get_avatar.md)） |
+| `get_avatar` | 获取用户头像直链（[文档](./扩展api/扩展api-get_avatar.md)） |
 | `get_robot_share_link` | 获取机器人分享链接 |
 | `send_private_msg_wakeup` | 发送被动唤醒私聊消息 |
 | `put_interaction` | 处理按钮交互回调 |
