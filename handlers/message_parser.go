@@ -859,8 +859,10 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 
 	// 从 messageText 中提取 [CQ:reply,id=数字] 用于构建 message_reference
 	replyRe := regexp.MustCompile(`\[CQ:reply,id=(\d+)\]`)
-	if matches := replyRe.FindStringSubmatch(messageText); len(matches) > 1 {
-		foundItems["reply_msg_id"] = append(foundItems["reply_msg_id"], matches[1])
+	for _, matches := range replyRe.FindAllStringSubmatch(messageText, -1) {
+		if len(matches) > 1 {
+			foundItems["reply_msg_id"] = append(foundItems["reply_msg_id"], matches[1])
+		}
 	}
 
 	// 在合并后的 messageText 中统一解析 [CQ:active]（覆盖消息段路径）
@@ -898,7 +900,17 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 		httpUrlVideoPattern := regexp.MustCompile(`\[CQ:video,file=http://(.+?)\]`)
 		httpsUrlVideoPattern := regexp.MustCompile(`\[CQ:video,file=https://(.+?)\]`)
 		mdPattern := regexp.MustCompile(`\[CQ:markdown,data=base64://(.+?)\]`)
+		mdJSONPattern := regexp.MustCompile(`\[CQ:markdown,data=(\{.*\})\]`)
 		qqMusicPattern := regexp.MustCompile(`\[CQ:music,type=qq,id=(\d+)\]`)
+
+		// 处理 [CQ:markdown,data={...}] JSON 格式：base64 编码后存入 foundItems["markdown"]
+		messageText = mdJSONPattern.ReplaceAllStringFunc(messageText, func(match string) string {
+			if submatch := mdJSONPattern.FindStringSubmatch(match); len(submatch) > 1 {
+				encoded := base64.StdEncoding.EncodeToString([]byte(submatch[1]))
+				foundItems["markdown"] = append(foundItems["markdown"], encoded)
+			}
+			return ""
+		})
 
 		patterns := []struct {
 			key     string
@@ -949,8 +961,19 @@ func transformMessageTextAt(messageText string, groupid string) string {
 	originalText := messageText
 	// DoNotReplaceAppid=false(默认频道bot,需要自己at自己时,否则改成true)
 	if !config.GetDoNotReplaceAppid() {
-		// 首先，将AppID替换为BotID
+		// 临时保护 CQ 码，避免 AppID→BotID 替换破坏 CQ 码参数
+		type cqHolder struct{ orig, placeholder string }
+		var holders []cqHolder
+		cqRE := regexp.MustCompile(`\[CQ:[^\]]*\]`)
+		messageText = cqRE.ReplaceAllStringFunc(messageText, func(m string) string {
+			ph := fmt.Sprintf("\x00CQ_PH_%d\x00", len(holders))
+			holders = append(holders, cqHolder{orig: m, placeholder: ph})
+			return ph
+		})
 		messageText = strings.ReplaceAll(messageText, AppID, BotID)
+		for _, h := range holders {
+			messageText = strings.ReplaceAll(messageText, h.placeholder, h.orig)
+		}
 	}
 
 	// 去除所有[CQ:reply,id=数字] todo 更好的处理办法
@@ -992,8 +1015,19 @@ func transformMessageTextAtNoGroupID(messageText string) string {
 	originalText := messageText
 	// DoNotReplaceAppid=false(默认频道bot,需要自己at自己时,否则改成true)
 	if !config.GetDoNotReplaceAppid() {
-		// 首先，将AppID替换为BotID
+		// 临时保护 CQ 码，避免 AppID→BotID 替换破坏 CQ 码参数
+		type cqHolder struct{ orig, placeholder string }
+		var holders []cqHolder
+		cqRE := regexp.MustCompile(`\[CQ:[^\]]*\]`)
+		messageText = cqRE.ReplaceAllStringFunc(messageText, func(m string) string {
+			ph := fmt.Sprintf("\x00CQ_PH_%d\x00", len(holders))
+			holders = append(holders, cqHolder{orig: m, placeholder: ph})
+			return ph
+		})
 		messageText = strings.ReplaceAll(messageText, AppID, BotID)
+		for _, h := range holders {
+			messageText = strings.ReplaceAll(messageText, h.placeholder, h.orig)
+		}
 	}
 
 	// 去除所有[CQ:reply,id=数字] todo 更好的处理办法
