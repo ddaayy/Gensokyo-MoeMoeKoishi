@@ -89,9 +89,9 @@ var eventParseFuncMap = map[dto.OPCode]map[dto.EventType]eventParseFunc{
 		dto.EventC2CMsgReject:  c2cMsgRejectHandler,
 		dto.EventC2CMsgReceive: c2cMsgReceiveHandler,
 
-		// [新增] 群成员变动事件（复用群机器人事件处理逻辑）
-		dto.EventGroupMemberAdd:    groupaddbothandler,
-		dto.EventGroupMemberRemove: groupdelbothandler,
+		// [新增] 群成员变动事件
+		dto.EventGroupMemberAdd:    groupMemberAddHandler,
+		dto.EventGroupMemberRemove: groupMemberRemoveHandler,
 	},
 }
 
@@ -321,6 +321,28 @@ func groupdelbothandler(payload *dto.WSPayload, message []byte) error {
 	}
 	if DefaultHandlers.GroupDelbot != nil {
 		return DefaultHandlers.GroupDelbot(payload, data)
+	}
+	return nil
+}
+
+func groupMemberAddHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.GroupAddBotEvent{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.GroupMemberAdd != nil {
+		return DefaultHandlers.GroupMemberAdd(payload, data)
+	}
+	return nil
+}
+
+func groupMemberRemoveHandler(payload *dto.WSPayload, message []byte) error {
+	data := &dto.GroupAddBotEvent{}
+	if err := ParseData(message, data); err != nil {
+		return err
+	}
+	if DefaultHandlers.GroupMemberRemove != nil {
+		return DefaultHandlers.GroupMemberRemove(payload, data)
 	}
 	return nil
 }
