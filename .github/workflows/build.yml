@@ -29,6 +29,7 @@ on:
           - '8'
           - '9'
           - best-lzma
+          - ultra-brute
         default: '7'
 
 
@@ -138,6 +139,8 @@ jobs:
           UPX_LVL="${{ github.event.inputs.upx_level || '7' }}"
           if [ "$UPX_LVL" = "0" ]; then
             echo "UPX compression disabled (level=0)"
+          elif [ "$UPX_LVL" = "ultra-brute" ]; then
+            upx --ultra-brute gensokyo-${{ matrix.os }}-${{ matrix.goarch }}${{ matrix.ext }}
           elif [ "$UPX_LVL" = "best-lzma" ]; then
             upx --best --lzma gensokyo-${{ matrix.os }}-${{ matrix.goarch }}${{ matrix.ext }}
           else
