@@ -11,6 +11,11 @@ on:
       - 'config.yml'
       - '.github/workflows/build.yml'
   workflow_dispatch:
+    inputs:
+      upx_level:
+        description: 'UPX compression level (0=skip, 1-9)'
+        required: false
+        default: '7'
 
 
 jobs:
@@ -116,7 +121,12 @@ jobs:
 
       - name: Compress with UPX
         run: |
-          upx -7 gensokyo-${{ matrix.os }}-${{ matrix.goarch }}${{ matrix.ext }}
+          UPX_LVL="${{ github.event.inputs.upx_level || '7' }}"
+          if [ "$UPX_LVL" = "0" ]; then
+            echo "UPX compression disabled (level=0)"
+          else
+            upx -"$UPX_LVL" gensokyo-${{ matrix.os }}-${{ matrix.goarch }}${{ matrix.ext }}
+          fi
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
