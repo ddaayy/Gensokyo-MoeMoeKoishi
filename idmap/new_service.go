@@ -1,6 +1,7 @@
 package idmap
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"strconv"
@@ -71,6 +72,9 @@ func initNewDBs() {
 		}
 
 		mylog.Printf("新 idmap 数据库已就绪: %s, %s", IdentityDBName, MsgDBName)
+
+		// 启动 msg_id 缓存自动清理（每分钟扫描，过期 ≥6 分钟删除）
+		startMsgCleanup()
 
 		// 不在此处启动后台迁移（由 StartMigration 统一管理）
 	})
@@ -326,13 +330,13 @@ func backgroundMigration() {
 		// 先迁移 identity（ids 桶）
 		migrateBucket(BucketName, IdentityBucketName, identityDB, "identity")
 
-		mylog.Printf("[idmap] ──── 第二阶段：迁移消息缓存 ────")
-		// 再迁移消息缓存（cache 桶）
-		migrateBucket(CacheBucketName, MsgBucketName, msgDB, "msg")
-
-		mylog.Printf("[idmap] ──── 第三阶段：迁移配置与应用数据 ────")
+		mylog.Printf("[idmap] ──── 第二阶段：迁移配置与应用数据 ────")
+		// msg_id 缓存不迁移（旧 cache 桶跳过），新 msg DB 从零开始
 		migrateBucket(ConfigBucket, ConfigBucket, identityDB, "config")
 		migrateBucket(UserInfoBucket, UserInfoBucket, identityDB, "UserInfo")
+
+		mylog.Printf("[idmap] ──── 第三阶段：数据完整性校验 ────")
+		// 校验
 
 		mylog.Printf("[idmap] ──── 第四阶段：数据完整性校验 ────")
 		// 校验
@@ -558,7 +562,6 @@ func verifyMigration() bool {
 	ok := true
 
 	ok = verifyBucket(BucketName, IdentityBucketName, identityDB, "identity") && ok
-	ok = verifyBucket(CacheBucketName, MsgBucketName, msgDB, "msg") && ok
 	ok = verifyBucket(ConfigBucket, ConfigBucket, identityDB, "config") && ok
 	ok = verifyBucket(UserInfoBucket, UserInfoBucket, identityDB, "UserInfo") && ok
 
@@ -630,12 +633,11 @@ func repairMigration() {
 	}
 
 	r1 := repairBucket(BucketName, IdentityBucketName, identityDB, "identity")
-	r2 := repairBucket(CacheBucketName, MsgBucketName, msgDB, "msg")
-	r3 := repairBucket(ConfigBucket, ConfigBucket, identityDB, "config")
-	r4 := repairBucket(UserInfoBucket, UserInfoBucket, identityDB, "UserInfo")
+	r2 := repairBucket(ConfigBucket, ConfigBucket, identityDB, "config")
+	r3 := repairBucket(UserInfoBucket, UserInfoBucket, identityDB, "UserInfo")
 
-	if r1+r2+r3+r4 > 0 {
-		mylog.Printf("[idmap] 修复完成，共修复 %d 条", r1+r2)
+	if r1+r2+r3 > 0 {
+		mylog.Printf("[idmap] 修复完成，共修复 %d 条", r1+r2+r3)
 	} else {
 		mylog.Printf("[idmap] 未发现需修复的条目")
 	}
@@ -688,9 +690,9 @@ func finalizeOldDB() {
 
 	mylog.Printf("[idmap] ======== 迁移全部完成 ========")
 	mylog.Printf("[idmap]   ✓ %s/ids       ── 永久身份映射", IdentityDBName)
-	mylog.Printf("[idmap]   ✓ %s/cache     ── 消息 ID 缓存", MsgDBName)
 	mylog.Printf("[idmap]   ✓ %s/config    ── 运行时配置", IdentityDBName)
 	mylog.Printf("[idmap]   ✓ %s/UserInfo  ── 用户信息缓存", IdentityDBName)
+	mylog.Printf("[idmap]   ◉ idmap-msg.db  ── 消息 ID 缓存（跳过旧库迁移，从零开始，自动清理）")
 	mylog.Printf("[idmap]")
 	mylog.Printf("[idmap]   ◉ idmap.db     ── 旧库（所有数据已迁出，可安全删除）")
 	mylog.Printf("[idmap]")
@@ -748,6 +750,11 @@ func StoreMsgID(realMsgID string) (int64, error) {
 		b.Put([]byte(key), rowBytes)
 		b.Put([]byte(revPrefix+strconv.FormatInt(newRow, 10)), []byte(key))
 
+		// 写入时间戳（用于自动过期清理）
+		timeBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(timeBytes, uint64(time.Now().Unix()))
+		b.Put([]byte("ts:"+revPrefix+strconv.FormatInt(newRow, 10)), timeBytes)
+
 		// 惰性迁移期：同时写旧 cache 桶（迁移完成后跳过）
 		if hasOldDB() && !isMigrationComplete() {
 			_ = db.Update(func(tx2 *bbolt.Tx) error {
@@ -798,6 +805,9 @@ func RetrieveMsgID(virtualID string) (string, error) {
 				binary.BigEndian.PutUint64(rowBytes, uint64(vID))
 				b.Put([]byte(key), rowBytes)
 				b.Put([]byte(revKey), []byte(key))
+				timeBytes := make([]byte, 8)
+				binary.BigEndian.PutUint64(timeBytes, uint64(time.Now().Unix()))
+				b.Put([]byte("ts:"+string(revKey)), timeBytes)
 				return nil
 			})
 			return id, nil
@@ -871,6 +881,9 @@ func newDBMsgStore(realMsgID string, virtualID int64) {
 		if b.Get([]byte(key)) == nil {
 			b.Put([]byte(key), rowBytes)
 			b.Put([]byte(revPrefix+strconv.FormatInt(virtualID, 10)), []byte(key))
+			timeBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(timeBytes, uint64(time.Now().Unix()))
+			b.Put([]byte("ts:"+revPrefix+strconv.FormatInt(virtualID, 10)), timeBytes)
 		}
 		return nil
 	})
@@ -906,4 +919,45 @@ func configAndUserInfoDB() *bbolt.DB {
 		return identityDB
 	}
 	return db
+}
+
+// startMsgCleanup 启动 msg_id 缓存自动清理协程（每分钟扫描一次）
+func startMsgCleanup() {
+	go func() {
+		for {
+			time.Sleep(1 * time.Minute)
+			cleanExpiredMsgIDs()
+		}
+	}()
+}
+
+// cleanExpiredMsgIDs 扫描 msg DB，删除存在时间 ≥ 6 分钟的 msg_id 映射
+func cleanExpiredMsgIDs() {
+	initNewDBs()
+	cutoff := time.Now().Add(-6 * time.Minute).Unix()
+
+	_ = msgDB.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte(MsgBucketName))
+		if b == nil {
+			return nil
+		}
+
+		tsPrefix := []byte("ts:")
+		c := b.Cursor()
+		for k, v := c.Seek(tsPrefix); k != nil && bytes.HasPrefix(k, tsPrefix); k, v = c.Next() {
+			ts := int64(binary.BigEndian.Uint64(v))
+			if ts < cutoff {
+				// 从时间戳 key "ts:row-123" 中提取反向 key "row-123"
+				revKey := k[len(tsPrefix):]
+				// 读取反向 key 获取前向 key
+				if fwdKey := b.Get(revKey); fwdKey != nil {
+					b.Delete(fwdKey) // 删除前向映射
+				}
+				b.Delete(revKey) // 删除反向映射
+				b.Delete(k)      // 删除时间戳
+				mylog.Printf("[idmap] msg_id 缓存过期删除: %s", string(revKey))
+			}
+		}
+		return nil
+	})
 }

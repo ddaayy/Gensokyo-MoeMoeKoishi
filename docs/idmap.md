@@ -193,12 +193,12 @@ func StartMigration() {
 
 | 外部函数（不变） | 内部路由逻辑 | 说明 |
 |-----------------|-------------|------|
-| `StoreIDv2(id)` | 迁移未完成 → `StoreID` + `newDBStore`（双写）<br>迁移完成后 → `storeIdentity`（纯新库） | 对外接口一致 |
-| `StoreCachev2(id)` | 迁移未完成 → `StoreCache` + `newDBMsgStore`（双写）<br>迁移完成后 → `StoreMsgID`（纯新库，带 6min 自动过期） | 对外接口一致 |
-| `RetrieveRowByIDv2(rowid)` | 始终 → `newDBLookup`（新库优先）→ 旧库回退 | 对外接口一致 |
-| `RetrieveRowByCachev2(rowid)` | 始终 → `newDBMsgLookup`（新库优先）→ 旧库回退 | 对外接口一致 |
-| `WriteConfig` / `ReadConfig` | 始终 → `configAndUserInfoDB()` 自动路由 | 对外接口一致 |
-| `StoreUserInfo` / `ListAllUsers` | 始终 → `configAndUserInfoDB()` 自动路由 | 对外接口一致 |
+| `StoreIDv2(id)` | 迁移未完成 → `StoreID` + `newDBStore`（双写）<br>迁移完成后 → `storeIdentity`（纯新库） |
+| `StoreCachev2(id)` | 迁移未完成 → `StoreCache` + `newDBMsgStore`（双写）<br>迁移完成后 → `StoreMsgID`（纯新库，带 6min 自动过期） |
+| `RetrieveRowByIDv2(rowid)` | 始终 → `newDBLookup`（新库优先）→ 旧库回退 |
+| `RetrieveRowByCachev2(rowid)` | 始终 → `newDBMsgLookup`（新库优先）→ 旧库回退 |
+| `WriteConfig` / `ReadConfig` | 始终 → `configAndUserInfoDB()` 自动路由 |
+| `StoreUserInfo` / `ListAllUsers` | 始终 → `configAndUserInfoDB()` 自动路由 |
 
 > 迁移对后端开发者**完全透明**。不需要修改任何调用代码，重启 Gensokyo 后迁移自动在后台完成。
 
