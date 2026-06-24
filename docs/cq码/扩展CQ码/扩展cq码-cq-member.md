@@ -6,6 +6,8 @@
 
 入站事件使用标准 OneBot V11 通知格式（`notice.group_increase` / `notice.group_decrease`），`message` 字段中附带 CQ 码供后端解析。出站仍为普通 `send_group_msg`。
 
+> ⚠️ **迁移提示**: 旧版 Gensokyo 以 `message` 类型发送 `[CQ:member]`，插件使用 `on_message` 即可。新版已切换为标准 OneBot V11 notice 格式，插件**必须改用 `on_notice`**，否则收不到事件。详见下方后端示例。
+
 ## 格式
 
 ```
@@ -48,27 +50,66 @@
 
 ## 后端示例（nonebot2）
 
+> **重要**: 必须使用 `on_notice` 而非 `on_message`。Gensokyo 以标准 OneBot V11 通知格式（`notice.group_increase` / `notice.group_decrease`）推送事件，`[CQ:member]` 在 `message` 字段中。
+
+### 合并处理器（推荐）
+
 ```python
 from nonebot import on_notice
-from nonebot.adapters.onebot.v11 import GroupIncreaseNoticeEvent, GroupDecreaseNoticeEvent, Bot, Message
+from nonebot.adapters.onebot.v11 import (
+    Bot, GroupIncreaseNoticeEvent, GroupDecreaseNoticeEvent, Message
+)
 
-# 入群事件
+member_handler = on_notice(priority=1, block=False)
+
+@member_handler.handle()
+async def handle_member(bot: Bot, event: GroupIncreaseNoticeEvent | GroupDecreaseNoticeEvent):
+    """统一处理群成员入群/退群"""
+    cq_code = getattr(event, "message", "") or ""
+
+    if isinstance(event, GroupIncreaseNoticeEvent):
+        await bot.send_group_msg(
+            group_id=event.group_id,
+            message=Message(
+                f"{cq_code}"
+                f"[CQ:at,qq={event.user_id}]"
+                f"[CQ:markdown,data=<base64>]"  # 替换为实际 markdown
+            )
+        )
+    else:
+        await bot.send_group_msg(
+            group_id=event.group_id,
+            message=Message(f"{cq_code}离开了我们")
+        )
+```
+
+### 分离处理器（可选）
+
+```python
+from nonebot import on_notice
+from nonebot.adapters.onebot.v11 import (
+    Bot, GroupIncreaseNoticeEvent, GroupDecreaseNoticeEvent, Message
+)
+
 @on_notice().handle()
 async def handle_group_increase(bot: Bot, event: GroupIncreaseNoticeEvent):
     cq_code = getattr(event, "message", "")
-    reply_msg = Message(
-        f"{cq_code}"
-        f"[CQ:at,qq={event.user_id}]"
-        f"[CQ:markdown,data=<base64>]"  # 替换为实际 markdown
+    await bot.send_group_msg(
+        group_id=event.group_id,
+        message=Message(
+            f"{cq_code}"
+            f"[CQ:at,qq={event.user_id}]"
+            f"[CQ:markdown,data=<base64>]"
+        )
     )
-    await bot.send_group_msg(group_id=event.group_id, message=reply_msg)
 
-# 退群事件
 @on_notice().handle()
 async def handle_group_decrease(bot: Bot, event: GroupDecreaseNoticeEvent):
     cq_code = getattr(event, "message", "")
-    reply_msg = Message(f"{cq_code}离开了我们")
-    await bot.send_group_msg(group_id=event.group_id, message=reply_msg)
+    await bot.send_group_msg(
+        group_id=event.group_id,
+        message=Message(f"{cq_code}离开了我们")
+    )
 ```
 
 ## 配置
