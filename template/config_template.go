@@ -57,7 +57,8 @@ settings:
   global_c2c_msg_receive_message: "机器人C2C推送已开启" # 当开启 global_c2c_msg_switch_to_message 时, C2C主动信息被开启将上报的信息.
   
   hash_id : true                                    # 使用hash来进行idmaps转换,可以让user_id不是123开始的递增值
-  idmap_pro : false                                  # 需开启hash_id配合,高级id转换增强,可以多个真实值bind到同一个虚拟值,对于每个用户,每个群\私聊\判断私聊\频道,都会产生新的虚拟值,但可以多次bind,bind到同一个数字.数据库负担会变大.
+  op_userid_type : "vuin"                           # 下游user_id/group_id来源: vuin/raw/ruin,默认使用内部vUIN
+  msgid_ttl_seconds : 3600                          # msgid-map.db中message_id映射保留时间,默认1小时
 
   #Gensokyo互联类
   server_dir: "<YOUR_SERVER_DIR>"                    # Lotus地址.不带http头的域名或ip,提供图片上传服务的服务器(图床)需要带端口号. 如果需要发base64图,需为公网ip,且开放对应端口

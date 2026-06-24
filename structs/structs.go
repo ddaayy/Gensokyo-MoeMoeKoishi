@@ -14,16 +14,16 @@ type Settings struct {
 	HeartBeatInterval   int      `yaml:"heart_beat_interval"`
 	LaunchReconectTimes int      `yaml:"launch_reconnect_times"`
 	//基础配置
-	AppID        uint64 `yaml:"app_id"`
-	Uin          int64  `yaml:"uin"`
-	Token        string `yaml:"token"`
-	ClientSecret string `yaml:"client_secret"`
-	ShardCount   int    `yaml:"shard_count"`
-	ShardID      int    `yaml:"shard_id"`
-	UseUin       bool   `yaml:"use_uin"`
-	IdmapIsolation     bool   `yaml:"idmap_isolation"`
-	IdmapLegacyCompat  bool   `yaml:"idmap_legacy_compat"`
-	ShardNum     int    `yaml:"shard_num"`
+	AppID             uint64 `yaml:"app_id"`
+	Uin               int64  `yaml:"uin"`
+	Token             string `yaml:"token"`
+	ClientSecret      string `yaml:"client_secret"`
+	ShardCount        int    `yaml:"shard_count"`
+	ShardID           int    `yaml:"shard_id"`
+	UseUin            bool   `yaml:"use_uin"`
+	IdmapIsolation    bool   `yaml:"idmap_isolation"`
+	IdmapLegacyCompat bool   `yaml:"idmap_legacy_compat"`
+	ShardNum          int    `yaml:"shard_num"`
 	//事件订阅类
 	TextIntent []string `yaml:"text_intent"`
 	//转换类
@@ -38,7 +38,8 @@ type Settings struct {
 	GlobalC2CMsgRejectMessage                string `yaml:"global_c2c_msg_reject_message"`
 	GlobalC2CMsgReceiveMessage               string `yaml:"global_c2c_msg_receive_message"`
 	HashID                                   bool   `yaml:"hash_id"`
-	IdmapPro                                 bool   `yaml:"idmap_pro"`
+	OpUserIDType                             string `yaml:"op_userid_type"`
+	MsgIDTTLSeconds                          int    `yaml:"msgid_ttl_seconds"`
 	//gensokyo互联类
 	Server_dir            string `yaml:"server_dir"`
 	Port                  string `yaml:"port"`

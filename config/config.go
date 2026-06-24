@@ -1222,16 +1222,40 @@ func GetWsServerPath() string {
 	return instance.Settings.WsServerPath
 }
 
-// 获取GetIdmapPro的值
+// GetIdmapPro 已废弃。MultiMap idmap 始终启用，旧 idmap_pro 分支保持关闭。
 func GetIdmapPro() bool {
+	return false
+}
+
+func GetOpUserIDType() string {
 	mu.RLock()
 	defer mu.RUnlock()
 
 	if instance == nil {
-		fmt.Println("Warning: instance is nil when trying to GetIdmapPro value.")
-		return false
+		fmt.Println("Warning: instance is nil when trying to OpUserIDType value.")
+		return "vuin"
 	}
-	return instance.Settings.IdmapPro
+	value := strings.ToLower(strings.TrimSpace(instance.Settings.OpUserIDType))
+	switch value {
+	case "raw", "ruin", "vuin":
+		return value
+	default:
+		return "vuin"
+	}
+}
+
+func GetMsgIDTTLSeconds() int {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to MsgIDTTLSeconds value.")
+		return 3600
+	}
+	if instance.Settings.MsgIDTTLSeconds <= 0 {
+		return 3600
+	}
+	return instance.Settings.MsgIDTTLSeconds
 }
 
 // 获取GetCardAndNick的值

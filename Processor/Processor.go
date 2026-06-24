@@ -13,8 +13,8 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
-	"strconv"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -224,6 +224,33 @@ func structToMap(obj interface{}) map[string]interface{} {
 	return out
 }
 
+func applyOpUserIDType(message map[string]interface{}) {
+	mode := config.GetOpUserIDType()
+	if mode == "vuin" {
+		return
+	}
+
+	replace := func(field, realField string) {
+		raw, ok := message[realField].(string)
+		if !ok || raw == "" {
+			return
+		}
+		if mode == "ruin" && !strings.HasPrefix(strings.ToLower(raw), "ruin-") {
+			return
+		}
+		message[field] = raw
+	}
+
+	replace("user_id", "real_user_id")
+	replace("group_id", "real_group_id")
+
+	if sender, ok := message["sender"].(map[string]interface{}); ok {
+		if userID, exists := message["user_id"]; exists {
+			sender["user_id"] = userID
+		}
+	}
+}
+
 // 修改函数的返回类型为 *Processor
 func NewProcessor(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *structs.Settings, wsclient []*wsclient.WebSocketClient) *Processors {
 	return &Processors{
@@ -245,6 +272,7 @@ func NewProcessorV2(api openapi.OpenAPI, apiv2 openapi.OpenAPI, settings *struct
 
 // 发信息给所有连接正向ws的客户端
 func (p *Processors) SendMessageToAllClients(message map[string]interface{}) error {
+	applyOpUserIDType(message)
 	var result *multierror.Error
 
 	for _, client := range p.WsServerClients {
@@ -262,6 +290,7 @@ func (p *Processors) SendMessageToAllClients(message map[string]interface{}) err
 
 // 方便快捷的发信息函数
 func (p *Processors) BroadcastMessageToAllFAF(message map[string]interface{}, api openapi.MessageAPI, data interface{}) error {
+	applyOpUserIDType(message)
 	// 并发发送到我们作为客户端的Wsclient
 	for _, client := range p.Wsclient {
 		go func(c callapi.WebSocketServerClienter) {
@@ -282,6 +311,7 @@ func (p *Processors) BroadcastMessageToAllFAF(message map[string]interface{}, ap
 
 // 方便快捷的发信息函数
 func (p *Processors) BroadcastMessageToAll(message map[string]interface{}, api openapi.MessageAPI, data interface{}) error {
+	applyOpUserIDType(message)
 	var wg sync.WaitGroup
 	errorCh := make(chan string, len(p.Wsclient)+len(p.WsServerClients))
 	defer close(errorCh)

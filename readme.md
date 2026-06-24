@@ -343,7 +343,8 @@ settings:
   global_private_to_channel: false                     # 私聊转频道事件
   global_forum_to_channel: false                       # 帖子转频道事件
   hash_id: true                                        # 使用 hash 生成虚拟 ID
-  idmap_pro: false                                     # 高级 ID 映射（需 hash_id）
+  op_userid_type: "vuin"                               # 下游 user_id/group_id 来源: vuin/raw/ruin
+  msgid_ttl_seconds: 3600                              # message_id 映射保留时间
   array: false                                         # 使用 segment 数组格式上报
 
   #── Gensokyo 互联 ───────────────────────────────────
