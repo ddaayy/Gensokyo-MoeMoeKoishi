@@ -2220,6 +2220,34 @@ func ProcessCQMemberOutbound(text string, eventID *string, groupID string, apiv2
 	return result, realTargetGroupID, cqUserID
 }
 
+// ProcessCQRemoveOutbound 处理出站 [CQ:remove,user_id=虚拟用户ID]
+// 剥离 CQ 码，将虚拟 user_id 转为真实 OpenID
+// 返回: (清理后的文本, 真实用户OpenID)
+func ProcessCQRemoveOutbound(text string) (string, string) {
+	var cqUserID string
+	re := regexp.MustCompile(`\[CQ:remove,user_id=([^,\]]*)\]`)
+	result := re.ReplaceAllStringFunc(text, func(match string) string {
+		sub := re.FindStringSubmatch(match)
+		if len(sub) == 2 {
+			cqUserID = strings.TrimSpace(sub[1])
+		}
+		return ""
+	})
+
+	if cqUserID == "" {
+		return result, ""
+	}
+
+	// 将虚拟 user_id 反向转换为 OpenID
+	openID, err := idmap.RetrieveRowByIDv2(cqUserID)
+	if err != nil || openID == "" {
+		mylog.Printf("[CQ:remove] user_id=%s 转换为 OpenID 失败: %v", cqUserID, err)
+		return result, ""
+	}
+	mylog.Printf("[CQ:remove] user_id=%s → OpenID=%s", cqUserID, openID)
+	return result, openID
+}
+
 // parseMarkdownFromMessage 从 base64 编码的 markdown JSON 数据中解析 dto.Markdown + keyboard
 // 输入格式: 原始 base64 字符串（无 base64:// 前缀）
 func parseMarkdownFromMessage(b64Data string) (*dto.Markdown, *keyboard.MessageKeyboard) {

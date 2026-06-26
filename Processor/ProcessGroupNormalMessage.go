@@ -144,6 +144,8 @@ func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) err
 		}
 		messageID = int(messageID64)
 	}
+	// 记录该群该用户最新一条消息的 real msg_id（用于 [CQ:remove] 撤回）
+	idmap.StoreLatestMsgID(data.GroupID, data.Author.ID, data.ID)
 
 	if config.GetAutoBind() {
 		if len(data.Attachments) > 0 && data.Attachments[0].URL != "" {

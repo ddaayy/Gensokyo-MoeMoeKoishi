@@ -424,6 +424,41 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Printf("[CQ:member] CQ 码 group_id 已转为 OpenID=%s", realGroupID)
 			}
 
+			// 处理出站 [CQ:remove,user_id=虚拟ID] → 撤回该用户最近一条消息
+			if strings.Contains(messageText, "[CQ:remove,") {
+				var targetUserOpenID string
+				messageText, targetUserOpenID = ProcessCQRemoveOutbound(messageText)
+				if targetUserOpenID != "" {
+					// 将群 ID 转为真实 OpenID
+					groupOpenID := message.Params.GroupID.(string)
+					if len(groupOpenID) != 32 {
+						var err error
+						groupOpenID, err = idmap.RetrieveRowByIDv2(groupOpenID)
+						if err != nil || groupOpenID == "" {
+							mylog.Printf("[CQ:remove] 转换群 ID 失败: %v", err)
+							groupOpenID = ""
+						}
+					}
+					if groupOpenID != "" {
+						realMsgID, err := idmap.GetLatestMsgID(groupOpenID, targetUserOpenID)
+						if err != nil || realMsgID == "" {
+							mylog.Printf("[CQ:remove] 未找到用户最近消息: group=%s user=%s", groupOpenID, targetUserOpenID)
+						} else {
+							mylog.Printf("[CQ:remove] 撤回消息: group=%s user=%s msgID=%s", groupOpenID, targetUserOpenID, realMsgID)
+							err := apiv2.RetractGroupMessage(context.TODO(), groupOpenID, realMsgID, openapi.RetractMessageOptionHidetip)
+							if err != nil {
+								mylog.Printf("[CQ:remove] 撤回失败: %v", err)
+							}
+						}
+					}
+				}
+				// 剥离后消息为空 → 不发送到频道
+				if messageText == "" {
+					mylog.Printf("[CQ:remove] 消息仅含 CQ 码，已剥离，跳过发送")
+					return "", nil
+				}
+			}
+
 			// 如果 CQ 码中携带了 group_id，优先使用它作为目标群（支持跨群路由）
 			targetGroupID := message.Params.GroupID.(string)
 			if realGroupID != "" {
