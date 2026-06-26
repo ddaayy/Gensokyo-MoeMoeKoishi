@@ -134,21 +134,82 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Generate release metadata
+        id: release_info
+        run: |
+          set -euo pipefail
+          build_date="$(TZ=Asia/Shanghai LC_ALL=C date +'%Y-%b-%d')"
+          commit_count="$(git rev-list --all --count)"
+          tag_name="build-${build_date}.r${commit_count}"
+          echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
+          echo "Release tag: ${tag_name}"
+
       - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
           path: output
           pattern: gensokyo-*
-          merge-multiple: true
 
-      - name: Create release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          TAG_NAME: Commit-${{ github.run_number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag_name }}
+          release_name: Release ${{ steps.release_info.outputs.tag_name }}
+          body: Automated build for ${{ github.sha }}
+          commitish: ${{ github.sha }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
         run: |
           set -euo pipefail
-          gh release create "$TAG_NAME" output/* \
-            --title "Release ${{ github.run_number }}" \
-            --notes "Automated build for ${{ github.sha }}" \
-            --target "${{ github.sha }}"
+          upload_url="${GITHUB_UPLOAD_URL%\{*}"
+          upload_url="${upload_url%\?*}"
+          asset_count=0
+          shopt -s nullglob
+
+          for dir in output/*; do
+            if [ ! -d "$dir" ]; then
+              echo "Expected ${dir} to be a directory." >&2
+              exit 1
+            fi
+
+            for file in "$dir"/*; do
+              if [ ! -f "$file" ]; then
+                echo "Expected a file in ${dir}, but found something else." >&2
+                exit 1
+              fi
+
+              asset_name="$(basename "$file")"
+              encoded_asset_name="$(jq -rn --arg value "$asset_name" '$value | @uri')"
+              echo "Uploading ${asset_name}"
+              curl \
+                --fail-with-body \
+                --silent \
+                --show-error \
+                --retry 3 \
+                -X POST \
+                -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary @"${file}" \
+                --output /dev/null \
+                "${upload_url}?name=${encoded_asset_name}&label=${encoded_asset_name}"
+              asset_count=$((asset_count + 1))
+            done
+          done
+
+          if [ "$asset_count" -eq 0 ]; then
+            echo "No release assets were found in output." >&2
+            exit 1
+          fi
