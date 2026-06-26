@@ -27,6 +27,7 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/Processor"
 	"github.com/hoshinonyaruko/gensokyo/acnode"
 	"github.com/hoshinonyaruko/gensokyo/botstats"
+	"github.com/hoshinonyaruko/gensokyo/buildinfo"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
 	"github.com/hoshinonyaruko/gensokyo/handlers"
@@ -56,6 +57,17 @@ import (
 var p *Processor.Processors
 
 func main() {
+	args := os.Args[1:]
+	if len(args) > 0 {
+		switch args[0] {
+		case "version", "-version", "--version":
+			fmt.Println(buildinfo.Version())
+			return
+		case "run":
+			args = args[1:]
+		}
+	}
+
 	// 定义faststart命令行标志。默认为false。
 	fastStart := flag.Bool("faststart", false, "start without initialization if set")
 	tidy := flag.Bool("tidy", false, "backup and tidy your config.yml")
@@ -64,9 +76,12 @@ func main() {
 	delcache := flag.Bool("del_cache", false, "delete cache bucket, it is safe")
 	compaction := flag.Bool("compaction", false, "compaction for apply db changes.")
 	m := flag.Bool("m", false, "Maintenance mode")
+	localLogger := flag.String("local-logger", "", "set to enable to write local log files")
 
 	// 解析命令行参数到定义的标志。
-	flag.Parse()
+	if err := flag.CommandLine.Parse(args); err != nil {
+		log.Fatalf("error parsing flags: %v", err)
+	}
 
 	// 检查是否使用了-faststart参数
 	if !*fastStart {
@@ -129,7 +144,8 @@ func main() {
 
 	//logger
 	logLevel := mylog.GetLogLevelFromConfig(config.GetLogLevel())
-	loggerAdapter := mylog.NewMyLogAdapter(logLevel, config.GetSaveLogs())
+	localFileLogger := strings.EqualFold(strings.TrimSpace(*localLogger), "enable")
+	loggerAdapter := mylog.NewMyLogAdapter(logLevel, localFileLogger)
 	mylog.SetLogLevel(logLevel)
 	botgo.SetLogger(loggerAdapter)
 

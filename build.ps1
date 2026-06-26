@@ -27,6 +27,25 @@ $output = "gensokyo-$targetOS-$targetArch$ext"
 Write-Host "Target: $targetOS/$targetArch"
 Write-Host "Output: $output"
 
+$gitCommit = ''
+try {
+    $gitCommit = (git rev-parse --short HEAD 2>$null).Trim()
+} catch {
+    $gitCommit = ''
+}
+
+if ($gitCommit) {
+    $buildType = 'git'
+    $buildSpec = $gitCommit
+} else {
+    $buildType = 'dev'
+    $epoch = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $buildSpec = ('{0}.{1:D3}' -f [math]::Floor($epoch / 1000), ($epoch % 1000))
+}
+
+$ldflags = "-s -w -X github.com/hoshinonyaruko/gensokyo/buildinfo.BuildType=$buildType -X github.com/hoshinonyaruko/gensokyo/buildinfo.BuildSpec=$buildSpec"
+Write-Host "Build info: $buildType-$buildSpec"
+
 # Download dependencies
 Write-Host "`n[1/3] Downloading deps..." -ForegroundColor Yellow
 go mod tidy
@@ -43,7 +62,7 @@ if (-not (Test-Path "$webuiDist/css/style.css")) {
     Set-Content -Path "$webuiDist/icons/placeholder.txt" -Value '' -NoNewline
     Set-Content -Path "$webuiDist/js/placeholder.js" -Value '' -NoNewline
 }
-go build -trimpath -ldflags="-s -w" -v -o $output .
+go build -trimpath -ldflags="$ldflags" -v -o $output .
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host 'Build failed!' -ForegroundColor Red

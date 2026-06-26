@@ -44,6 +44,25 @@ Write-Host "=== Gensokyo Build All ===" -ForegroundColor Cyan
 Write-Host "Go Proxy: $env:GOPROXY" -ForegroundColor Gray
 Write-Host "Targets : $($targets.Count) platform(s)`n" -ForegroundColor Gray
 
+$gitCommit = ''
+try {
+    $gitCommit = (git rev-parse --short HEAD 2>$null).Trim()
+} catch {
+    $gitCommit = ''
+}
+
+if ($gitCommit) {
+    $buildType = 'git'
+    $buildSpec = $gitCommit
+} else {
+    $buildType = 'dev'
+    $epoch = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $buildSpec = ('{0}.{1:D3}' -f [math]::Floor($epoch / 1000), ($epoch % 1000))
+}
+
+$ldflags = "-s -w -X github.com/hoshinonyaruko/gensokyo/buildinfo.BuildType=$buildType -X github.com/hoshinonyaruko/gensokyo/buildinfo.BuildSpec=$buildSpec"
+Write-Host "Build info: $buildType-$buildSpec`n" -ForegroundColor Gray
+
 # ===================== Deps (once) =====================
 Write-Host "[deps] Downloading dependencies..." -ForegroundColor Yellow
 go mod tidy
@@ -58,7 +77,7 @@ foreach ($t in $targets) {
     $outName = "gensokyo-$($t.OS)-$($t.Arch)$ext"
 
     Write-Host "[build] $($t.GOOS)/$($t.GOARCH) -> $outName" -ForegroundColor Yellow
-    go build -trimpath -ldflags="-s -w" -v -o $outName .
+    go build -trimpath -ldflags="$ldflags" -v -o $outName .
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  FAILED: $($t.GOOS)/$($t.GOARCH)" -ForegroundColor Red

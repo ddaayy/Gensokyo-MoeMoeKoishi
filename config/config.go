@@ -1088,6 +1088,30 @@ func GetMePrefix() string {
 	return instance.Settings.MePrefix
 }
 
+// GetStatusPrefix 获取状态指令前缀。
+func GetStatusPrefix() string {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to GetStatusPrefix value.")
+		return "/gskstatus"
+	}
+	return instance.Settings.StatusPrefix
+}
+
+// GetBroadcastPrefix 获取广播指令前缀。
+func GetBroadcastPrefix() string {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if instance == nil {
+		fmt.Println("Warning: instance is nil when trying to GetBroadcastPrefix value.")
+		return "/gskbroadcast"
+	}
+	return instance.Settings.BroadcastPrefix
+}
+
 // 获取FrpPort的值
 func GetFrpPort() string {
 	mu.RLock()

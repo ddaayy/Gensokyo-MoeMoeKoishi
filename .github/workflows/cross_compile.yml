@@ -96,10 +96,12 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
+          build_spec="${GITHUB_SHA::7}"
+          ldflags="-s -w -X github.com/hoshinonyaruko/gensokyo/buildinfo.BuildType=git -X github.com/hoshinonyaruko/gensokyo/buildinfo.BuildSpec=${build_spec}"
           if [ "$GOOS" = "windows" ]; then
-            go build -ldflags="-s -w" -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.exe
+            go build -ldflags="$ldflags" -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}.exe
           else
-            go build -ldflags="-s -w" -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
+            go build -ldflags="$ldflags" -o output/gensokyo-${{ matrix.os }}-${{ matrix.goarch }}
           fi
 
       - name: Compress executable files with UPX

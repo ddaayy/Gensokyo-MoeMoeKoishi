@@ -176,17 +176,19 @@ type Settings struct {
 	HttpOnlyBot       bool `yaml:"http_only_bot"`
 	DoNotReplaceAppid bool `yaml:"do_not_replace_appid"`
 	//内置指令
-	BindPrefix   string   `yaml:"bind_prefix"`
-	MePrefix     string   `yaml:"me_prefix"`
-	UnlockPrefix string   `yaml:"unlock_prefix"`
-	LinkPrefix   string   `yaml:"link_prefix"`
-	AutoLink     bool     `yaml:"auto_link"`
-	MusicPrefix  string   `yaml:"music_prefix"`
-	LinkBots     []string `yaml:"link_bots"`
-	LinkText     string   `yaml:"link_text"`
-	LinkPic      string   `yaml:"link_pic"`
-	LinkLines    int      `yaml:"link_lines"`
-	LinkNum      int      `yaml:"link_num"`
+	BindPrefix      string   `yaml:"bind_prefix"`
+	MePrefix        string   `yaml:"me_prefix"`
+	StatusPrefix    string   `yaml:"status_prefix"`
+	BroadcastPrefix string   `yaml:"broadcast_prefix"`
+	UnlockPrefix    string   `yaml:"unlock_prefix"`
+	LinkPrefix      string   `yaml:"link_prefix"`
+	AutoLink        bool     `yaml:"auto_link"`
+	MusicPrefix     string   `yaml:"music_prefix"`
+	LinkBots        []string `yaml:"link_bots"`
+	LinkText        string   `yaml:"link_text"`
+	LinkPic         string   `yaml:"link_pic"`
+	LinkLines       int      `yaml:"link_lines"`
+	LinkNum         int      `yaml:"link_num"`
 	//HTTP API配置
 	HttpAddress         string   `yaml:"http_address"`
 	AccessToken         string   `yaml:"http_access_token"`

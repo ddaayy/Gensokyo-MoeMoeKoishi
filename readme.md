@@ -375,7 +375,7 @@ settings:
   #── 日志 ────────────────────────────────────────────
   developer_log: false                                 # 开启开发者日志
   log_level: 1                                         # 0=debug 1=info 2=warn 3=error
-  save_logs: false                                     # 保存日志文件
+  save_logs: false                                     # 兼容保留; 本地文件日志仅在启动参数 run --local-logger=enable 时启用
 
   #── WebUI ───────────────────────────────────────────
   disable_webui: false                                 # 禁用 Web 管理面板
@@ -387,6 +387,9 @@ settings:
   remove_at: false                                     # 忽略指令前 @
   white_prefix_mode: false                             # 指令白名单模式
   black_prefix_mode: false                             # 指令黑名单模式
+  bind_prefix: "/bind"                                 # 绑定指令
+  status_prefix: "/gskstatus"                          # 运行状态查询; 设为 ""、/disabled 或 /disabled... 可禁用
+  broadcast_prefix: "/gskbroadcast"                    # 广播指令; 设为 ""、/disabled 或 /disabled... 可禁用
 
   #── Markdown 消息 ──────────────────────────────────
   twoway_echo: false                                   # 启用双向 echo

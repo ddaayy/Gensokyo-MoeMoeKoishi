@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hoshinonyaruko/gensokyo/buildinfo"
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/echo"
@@ -577,7 +578,7 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	}
 
 	//unlock指令
-	if Type == "guild" && strings.HasPrefix(cleanedMessage, config.GetUnlockPrefix()) {
+	if Type == "guild" && commandMatch(cleanedMessage, config.GetUnlockPrefix()) {
 		dm := &dto.DirectMessageToCreate{
 			SourceGuildID: guildid,
 			RecipientID:   guilduserid,
@@ -598,7 +599,7 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	}
 
 	// me指令处理逻辑
-	if strings.HasPrefix(cleanedMessage, config.GetMePrefix()) {
+	if commandMatch(cleanedMessage, config.GetMePrefix()) {
 		if err != nil {
 			// 发送错误信息
 			SendMessage(err.Error(), data, Type, p.Api, p.Apiv2)
@@ -646,7 +647,8 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	}
 
 	// 如果不是临时指令，检查是否具有执行bind操作的权限并且消息以特定前缀开始
-	if (realValueIncluded || virtualValueIncluded) && strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
+	bindMatched := commandMatch(cleanedMessage, config.GetBindPrefix())
+	if (realValueIncluded || virtualValueIncluded) && bindMatched {
 		// 执行 bind 操作
 		if config.GetIdmapPro() {
 			err := performBindOperationV2(cleanedMessage, data, Type, p.Api, p.Apiv2, newpro1)
@@ -660,46 +662,25 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 			}
 		}
 		return nil
-	} else if strings.HasPrefix(cleanedMessage, config.GetBindPrefix()) {
+	} else if bindMatched {
 		// 生成临时指令
 		tempCmd := handleNoPermission()
 		mylog.Printf("您没有权限,使用临时指令：%s 忽略权限检查,或将masterid设置为空数组", tempCmd)
 		SendMessage("您没有权限,请配置config.yml或查看日志,使用临时指令", data, Type, p.Api, p.Apiv2)
 	}
 
-	// -status 指令
-	if (realValueIncluded || virtualValueIncluded) && strings.HasPrefix(cleanedMessage, "-status") {
-		msgRecv := atomic.LoadUint64(&mylog.MetricMsgReceived)
-		msgSent := atomic.LoadUint64(&mylog.MetricMsgSent)
-		errCount := atomic.LoadUint64(&mylog.MetricErrorCount)
-		slowEvents := atomic.LoadUint64(&mylog.MetricSlowEvents)
-		uptimeSec := time.Since(mylog.StartTime).Seconds()
-
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		memAlloc := float64(m.Alloc) / 1024 / 1024
-		goroutines := runtime.NumGoroutine()
-
-		statusText := fmt.Sprintf(
-			"Gensokyo Bot Status:\n"+
-				"- 运行时间 (Uptime): %.2f 秒\n"+
-				"- 内存分配 (Alloc Memory): %.2f MB\n"+
-				"- 协程数量 (Goroutines): %d\n"+
-				"- 接收消息数 (Msg Received): %d\n"+
-				"- 发送消息数 (Msg Sent): %d\n"+
-				"- 错误发生数 (Errors): %d\n"+
-				"- 慢事件发生数 (Slow Events): %d",
-			uptimeSec, memAlloc, goroutines, msgRecv, msgSent, errCount, slowEvents,
-		)
-		SendMessage(statusText, data, Type, p.Api, p.Apiv2)
+	// status 指令
+	if (realValueIncluded || virtualValueIncluded) && commandMatch(cleanedMessage, config.GetStatusPrefix()) {
+		SendMessage(buildStatusText(), data, Type, p.Api, p.Apiv2)
 		return nil
 	}
 
-	// -broadcast 指令
-	if (realValueIncluded || virtualValueIncluded) && strings.HasPrefix(cleanedMessage, "-broadcast") {
-		broadcastMsg := strings.TrimSpace(strings.TrimPrefix(cleanedMessage, "-broadcast"))
+	// broadcast 指令
+	if (realValueIncluded || virtualValueIncluded) && commandMatch(cleanedMessage, config.GetBroadcastPrefix()) {
+		broadcastPrefix := strings.TrimSpace(config.GetBroadcastPrefix())
+		broadcastMsg := strings.TrimSpace(strings.TrimPrefix(cleanedMessage, broadcastPrefix))
 		if broadcastMsg == "" {
-			SendMessage("广播内容不能为空。用法: -broadcast <内容>", data, Type, p.Api, p.Apiv2)
+			SendMessage("广播内容不能为空。用法: "+broadcastPrefix+" <内容>", data, Type, p.Api, p.Apiv2)
 			return nil
 		}
 
@@ -748,12 +729,86 @@ func (p *Processors) HandleFrameworkCommand(messageText string, data interface{}
 	}
 
 	//link指令
-	if strings.HasPrefix(cleanedMessage, config.GetLinkPrefix()) {
+	if commandMatch(cleanedMessage, config.GetLinkPrefix()) {
 		md, kb := generateMdByConfig()
 		SendMessageMd(md, kb, data, Type, p.Api, p.Apiv2)
 	}
 
 	return nil
+}
+
+func commandDisabled(prefix string) bool {
+	trimmed := strings.TrimSpace(prefix)
+	return trimmed == "" || strings.HasPrefix(strings.ToLower(trimmed), "/disabled")
+}
+
+func commandMatch(message, prefix string) bool {
+	if commandDisabled(prefix) {
+		return false
+	}
+	return strings.HasPrefix(message, strings.TrimSpace(prefix))
+}
+
+func buildStatusText() string {
+	msgRecv := atomic.LoadUint64(&mylog.MetricMsgReceived)
+	msgSent := atomic.LoadUint64(&mylog.MetricMsgSent)
+	errCount := atomic.LoadUint64(&mylog.MetricErrorCount)
+	slowEvents := atomic.LoadUint64(&mylog.MetricSlowEvents)
+
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	memAllocMB := m.Alloc / 1024 / 1024
+
+	return fmt.Sprintf(
+		"Gensokyo Status\n"+
+			"  - Version: %s\n"+
+			"  - Recv/Send: %d / %d\n"+
+			"  - Slow/Error: %d / %d\n"+
+			"  - Mem: %d MB with %d goroutines\n"+
+			"  - Uptime: %s",
+		buildinfo.Version(),
+		msgRecv, msgSent,
+		slowEvents, errCount,
+		memAllocMB, runtime.NumGoroutine(),
+		formatUptime(time.Since(mylog.StartTime)),
+	)
+}
+
+func formatUptime(d time.Duration) string {
+	if d < 0 {
+		d = 0
+	}
+
+	totalSeconds := int64(d / time.Second)
+	years := totalSeconds / (365 * 24 * 3600)
+	totalSeconds %= 365 * 24 * 3600
+	months := totalSeconds / (30 * 24 * 3600)
+	totalSeconds %= 30 * 24 * 3600
+	days := totalSeconds / (24 * 3600)
+	totalSeconds %= 24 * 3600
+	hours := totalSeconds / 3600
+	totalSeconds %= 3600
+	minutes := totalSeconds / 60
+	seconds := d.Seconds() - float64(int64(d/time.Minute)*60)
+
+	parts := make([]string, 0, 6)
+	if years > 0 {
+		parts = append(parts, fmt.Sprintf("%dy", years))
+	}
+	if len(parts) > 0 || months > 0 {
+		parts = append(parts, fmt.Sprintf("%dm", months))
+	}
+	if len(parts) > 0 || days > 0 {
+		parts = append(parts, fmt.Sprintf("%dd", days))
+	}
+	if len(parts) > 0 || hours > 0 {
+		parts = append(parts, fmt.Sprintf("%dh", hours))
+	}
+	if len(parts) > 0 || minutes > 0 {
+		parts = append(parts, fmt.Sprintf("%dm", minutes))
+	}
+	parts = append(parts, fmt.Sprintf("%.2f", seconds))
+	return strings.Join(parts, " ")
 }
 
 // 生成由两个英文字母构成的唯一临时指令

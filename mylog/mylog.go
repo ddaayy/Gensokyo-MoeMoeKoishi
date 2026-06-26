@@ -2,7 +2,6 @@ package mylog
 
 import (
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -101,15 +100,6 @@ func init() {
 
 	exeDir := filepath.Dir(exePath)
 	logPath = filepath.Join(exeDir, "log")
-
-	// 启动日志清理后台循环
-	go func() {
-		for {
-			maxAge := config.GetLogMaxAgeDays()
-			CleanLogs(logPath, maxAge)
-			time.Sleep(24 * time.Hour)
-		}
-	}()
 }
 
 // 全局变量，用于存储日志启用状态
@@ -122,8 +112,8 @@ func SetEnableFileLog(value bool) {
 
 // 接收新参数，并设置文件日志路径
 func NewMyLogAdapter(level LogLevel, enableFileLog bool) *MyLogAdapter {
+	SetEnableFileLog(enableFileLog)
 	if enableFileLog {
-		SetEnableFileLog(true)
 		if _, err := os.Stat(logPath); os.IsNotExist(err) {
 			err := os.MkdirAll(logPath, 0755)
 			if err != nil {
@@ -137,6 +127,22 @@ func NewMyLogAdapter(level LogLevel, enableFileLog bool) *MyLogAdapter {
 		EnableFileLog: enableFileLog,
 		FileLogPath:   logPath,
 	}
+}
+
+func getCurrentLogFilename() string {
+	suffixMins := config.GetLogSuffixPerMins()
+	baseFilename := time.Now().Format("2006-01-02")
+	if suffixMins <= 0 {
+		return baseFilename + ".log"
+	}
+
+	now := time.Now()
+	currentMinutes := now.Hour()*60 + now.Minute()
+	windowStartMinutes := (currentMinutes / suffixMins) * suffixMins
+	windowStartHour := windowStartMinutes / 60
+	windowStartMinute := windowStartMinutes % 60
+
+	return fmt.Sprintf("%s-%02d-%02d.log", baseFilename, windowStartHour, windowStartMinute)
 }
 
 // 独立的日志清除和压缩逻辑
@@ -222,42 +228,19 @@ func gzipFile(src, dst string) error {
 	return err
 }
 
-// 统一的文件日志写入逻辑（支持按级分割、按天建目录、大小轮转及 JSON/Text 格式）
 func writeLogToFile(baseDir string, level string, message string) {
+	if baseDir == "" {
+		return
+	}
 	logMutex.Lock()
 	defer logMutex.Unlock()
 
-	todayStr := time.Now().Format("2006-01-02")
-	dir := filepath.Join(baseDir, todayStr)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		fmt.Println("Error creating log directory:", err)
 		return
 	}
 
-	fileName := strings.ToLower(level) + ".log"
-	filePath := filepath.Join(dir, fileName)
-
-	// 大小限制检测与轮转
-	maxSizeMB := config.GetLogMaxSizeMB()
-	maxSizeBytes := int64(maxSizeMB) * 1024 * 1024
-
-	if stat, err := os.Stat(filePath); err == nil {
-		if stat.Size() >= maxSizeBytes {
-			var index = 1
-			var rotPath string
-			for {
-				rotPath = filepath.Join(dir, fmt.Sprintf("%s.%d.log", strings.ToLower(level), index))
-				if _, err := os.Stat(rotPath); os.IsNotExist(err) {
-					break
-				}
-				index++
-			}
-			if err := os.Rename(filePath, rotPath); err != nil {
-				fmt.Println("Error rotating log file:", err)
-			}
-		}
-	}
-
+	filePath := filepath.Join(baseDir, getCurrentLogFilename())
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("Error opening log file:", err)
@@ -265,25 +248,7 @@ func writeLogToFile(baseDir string, level string, message string) {
 	}
 	defer file.Close()
 
-	var logEntry string
-	timeStr := time.Now().Format("2006-01-02T15:04:05")
-	if config.GetLogJsonOutput() {
-		entryStruct := EnhancedLogEntry{
-			Time:    timeStr,
-			Level:   level,
-			Message: message,
-		}
-		data, err := json.Marshal(entryStruct)
-		if err == nil {
-			logEntry = string(data) + "\n"
-		} else {
-			logEntry = fmt.Sprintf(`{"time":"%s","level":"%s","message":%q}`+"\n", timeStr, level, message)
-		}
-	} else {
-		logEntry = fmt.Sprintf("[%s] %s: %s\n", timeStr, level, message)
-	}
-
-	if _, err := file.WriteString(logEntry); err != nil {
+	if _, err := file.WriteString(formatLogLine(level, message) + "\n"); err != nil {
 		fmt.Println("Error writing to log file:", err)
 	}
 }
@@ -304,28 +269,58 @@ func LogToFile(level, message string) {
 	writeLogToFile(logPath, level, message)
 }
 
-// 统一的控制台彩色输出逻辑
 func printConsole(level string, message string) {
+	timestamp, levelText, module, body := formatLogParts(level, message)
 	if config.GetLogColorEnabled() {
-		var coloredLevel string
+		var coloredLevel interface{}
 		switch level {
+		case "TRACE":
+			coloredLevel = colorBlue(levelText)
 		case "DEBUG":
-			coloredLevel = colorBlue("[" + level + "]")
+			coloredLevel = colorBlue(levelText)
 		case "INFO":
-			coloredLevel = colorGreen("[" + level + "]")
+			coloredLevel = colorGreen(levelText)
 		case "WARN":
-			coloredLevel = colorYellow("[" + level + "]")
+			coloredLevel = colorYellow(levelText)
 		case "ERROR":
-			coloredLevel = colorRed("[" + level + "]")
+			coloredLevel = colorRed(levelText)
 		case "FATAL":
-			coloredLevel = colorFatal("[" + level + "]")
+			coloredLevel = colorFatal(levelText)
 		default:
-			coloredLevel = "[" + level + "]"
+			coloredLevel = levelText
 		}
-		log.Printf("%s %s", coloredLevel, message)
+		fmt.Printf("%s %s [%s] %s\n", timestamp, coloredLevel, module, body)
 	} else {
-		log.Printf("[%s] %s", level, message)
+		fmt.Println(formatLogLine(level, message))
 	}
+}
+
+func formatLogLine(level, message string) string {
+	timestamp, levelText, module, body := formatLogParts(level, message)
+	return fmt.Sprintf("%s %s [%s] %s", timestamp, levelText, module, body)
+}
+
+func formatLogParts(level, message string) (string, string, string, string) {
+	now := time.Now()
+	timestamp := strings.ToUpper(now.Format("2006/Jan/02 PM 03:04:05"))
+	module, body := extractModule(strings.TrimSpace(message))
+	return timestamp, fmt.Sprintf("[%-5s]", strings.ToUpper(level)), module, body
+}
+
+func extractModule(message string) (string, string) {
+	const defaultModule = "core"
+	if !strings.HasPrefix(message, "[") {
+		return defaultModule, message
+	}
+	end := strings.Index(message, "]")
+	if end <= 1 || end > 32 {
+		return defaultModule, message
+	}
+	module := strings.TrimSpace(message[1:end])
+	if module == "" || strings.ContainsAny(module, " \t\r\n") {
+		return defaultModule, message
+	}
+	return strings.ToLower(module), strings.TrimSpace(message[end+1:])
 }
 
 // Debug logs a message at the debug level.
@@ -480,7 +475,7 @@ func Fatalf(format string, v ...interface{}) {
 
 func emitLog(level, message string) {
 	entry := EnhancedLogEntry{
-		Time:    time.Now().Format("2006-01-02T15:04:05"),
+		Time:    strings.ToUpper(time.Now().Format("2006/Jan/02 PM 03:04:05")),
 		Level:   level,
 		Message: message,
 	}
