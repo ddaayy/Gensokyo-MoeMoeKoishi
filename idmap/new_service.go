@@ -1,5 +1,3 @@
-//go:build legacy_idmap_disabled
-
 package idmap
 
 import (
@@ -30,6 +28,12 @@ const (
 
 	IdentityCounterKey = "currentRow"
 	MsgCounterKey      = "currentRow"
+
+	latestMsgBucket    = "latest_by_group_user"
+	latestMsgExpBucket = "latest_expires_at"
+
+	// internal sentinel key used by StoreLatestBotMsgID / GetLatestBotMsgID
+	latestBotMessageUserKey = "\x00qq_bot_self"
 )
 
 var (
@@ -63,6 +67,8 @@ func initNewDBs() {
 			{identityDB, IdentityDBName, ConfigBucket},
 			{identityDB, IdentityDBName, UserInfoBucket},
 			{msgDB, MsgDBName, MsgBucketName},
+			{msgDB, MsgDBName, latestMsgBucket},
+			{msgDB, MsgDBName, latestMsgExpBucket},
 		} {
 			err = d.db.Update(func(tx *bbolt.Tx) error {
 				_, err := tx.CreateBucketIfNotExists([]byte(d.bucket))
@@ -960,6 +966,99 @@ func cleanExpiredMsgIDs() {
 				mylog.Printf("[idmap] msg_id 缓存过期删除: %s", string(revKey))
 			}
 		}
+
+		// 清理 latest_by_group_user / latest_expires_at 中的过期条目
+		latestB := tx.Bucket([]byte(latestMsgBucket))
+		latestExpB := tx.Bucket([]byte(latestMsgExpBucket))
+		var expiredLatest [][]byte
+		_ = latestExpB.ForEach(func(k, v []byte) error {
+			exp := readInt64(v)
+			if exp > 0 && exp < time.Now().Unix() {
+				expiredLatest = append(expiredLatest, append([]byte(nil), k...))
+			}
+			return nil
+		})
+		for _, key := range expiredLatest {
+			_ = latestB.Delete(key)
+			_ = latestExpB.Delete(key)
+		}
 		return nil
 	})
+}
+
+func closeNewDBs() {
+	if identityDB != nil {
+		identityDB.Close()
+	}
+	if msgDB != nil {
+		msgDB.Close()
+	}
+}
+
+func putInt64(bucket *bbolt.Bucket, key []byte, value int64) error {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, uint64(value))
+	return bucket.Put(key, buf)
+}
+
+func readInt64(value []byte) int64 {
+	if len(value) != 8 {
+		return 0
+	}
+	return int64(binary.BigEndian.Uint64(value))
+}
+
+// ---------------------------------------------------------------------------
+// Latest message tracking (needed by handlers/delete_group_msg.go)
+// ---------------------------------------------------------------------------
+
+// StoreLatestMsgID records the latest cloud message for a user in a group.
+func StoreLatestMsgID(groupOpenID, userOpenID, realMsgID string) {
+	if groupOpenID == "" || userOpenID == "" || realMsgID == "" {
+		return
+	}
+	initNewDBs()
+	expires := time.Now().Unix() + int64(config.GetMsgIDTTLSeconds())
+	key := []byte(groupOpenID + ":" + userOpenID)
+	if err := msgDB.Update(func(tx *bbolt.Tx) error {
+		if err := tx.Bucket([]byte(latestMsgBucket)).Put(key, []byte(realMsgID)); err != nil {
+			return err
+		}
+		return putInt64(tx.Bucket([]byte(latestMsgExpBucket)), key, expires)
+	}); err != nil {
+		mylog.Printf("[idmap] latest message store failed: group=%s user=%s error=%v", groupOpenID, userOpenID, err)
+	}
+}
+
+// GetLatestMsgID returns the latest unexpired cloud message for a user in a group.
+func GetLatestMsgID(groupOpenID, userOpenID string) (string, error) {
+	initNewDBs()
+	key := []byte(groupOpenID + ":" + userOpenID)
+	var realMsgID string
+	err := msgDB.View(func(tx *bbolt.Tx) error {
+		exp := readInt64(tx.Bucket([]byte(latestMsgExpBucket)).Get(key))
+		if exp == 0 || exp < time.Now().Unix() {
+			return ErrKeyNotFound
+		}
+		value := tx.Bucket([]byte(latestMsgBucket)).Get(key)
+		if value == nil {
+			return ErrKeyNotFound
+		}
+		realMsgID = string(value)
+		return nil
+	})
+	if err != nil || realMsgID == "" {
+		return "", ErrKeyNotFound
+	}
+	return realMsgID, nil
+}
+
+// StoreLatestBotMsgID records the latest message sent by the QQ Bot itself in a group.
+func StoreLatestBotMsgID(groupOpenID, realMsgID string) {
+	StoreLatestMsgID(groupOpenID, latestBotMessageUserKey, realMsgID)
+}
+
+// GetLatestBotMsgID returns the latest unexpired message sent by the QQ Bot itself in a group.
+func GetLatestBotMsgID(groupOpenID string) (string, error) {
+	return GetLatestMsgID(groupOpenID, latestBotMessageUserKey)
 }

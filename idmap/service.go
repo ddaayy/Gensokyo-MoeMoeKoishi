@@ -1458,7 +1458,7 @@ func UpdateVirtualValuev2(oldRowValue, newRowValue int64) error {
 		return nil
 	}
 
-	return bindVuin(oldRowValue, newRowValue)
+	return UpdateVirtualValue(oldRowValue, newRowValue)
 }
 
 // RetrieveRealValuev2 根据虚拟值获取真实值
@@ -1558,10 +1558,8 @@ func RetrieveVirtualValuev2(realValue string) (string, string, error) {
 		return realValue, virtualValue, nil
 	}
 
-	if virtualValue, ok := lookupVirtualIdentity(realValue); ok {
-		return realValue, fmt.Sprintf("%d", virtualValue), nil
-	}
-	return "", "", ErrKeyNotFound
+	// 查旧库
+	return RetrieveVirtualValue(realValue)
 }
 
 // 根据2个真实值 获取2个虚拟值 群号 然后 用户号
@@ -1841,10 +1839,10 @@ func UpdateVirtualValuev2Pro(oldVirtualValue1, newVirtualValue1, oldVirtualValue
 		return nil
 	}
 
-	if err := bindVuin(oldVirtualValue1, newVirtualValue1); err != nil {
+	if err := UpdateVirtualValue(oldVirtualValue1, newVirtualValue1); err != nil {
 		return err
 	}
-	return bindVuin(oldVirtualValue2, newVirtualValue2)
+	return UpdateVirtualValue(oldVirtualValue2, newVirtualValue2)
 }
 
 // sub 要匹配的类型 typesuffix 相当于:type 的type

@@ -1,3 +1,5 @@
+//go:build map_idmap
+
 package idmap
 
 import (
