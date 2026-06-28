@@ -648,6 +648,7 @@ func main() {
 	if conf.Settings.MemoryMsgid {
 		echo.StartCleanupRoutine()
 	}
+	idmap.StartUsernameCacheCleanup()
 
 	// 使用color库输出天蓝色的文本
 	cyan := color.New(color.FgCyan)

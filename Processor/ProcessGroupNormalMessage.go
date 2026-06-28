@@ -77,6 +77,10 @@ func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) err
 				mylog.Printf("Error storing ID: %v", err)
 				return nil
 			}
+			// 缓存用户名，供出站 [CQ:at,qq=虚拟ID] 转换为 <@username>
+			if data.Author.Username != "" {
+				idmap.StoreUserName(strconv.FormatInt(userid64, 10), data.Author.Username)
+			}
 		}
 		mylog.Printf("[message] group id mapped: raw_group=%s vGroup=%d raw_user=%s vUser=%d", data.GroupID, GroupID64, data.Author.ID, userid64)
 	}

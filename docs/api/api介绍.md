@@ -121,7 +121,7 @@ event.json()  # 查看完整字段
 **规则：**
 - 入站 `@bot` 从 content 中剥离（`to_me = true`）
 - 入站 `@其他人` 转为 `[CQ:at,qq=虚拟ID]`
-- 出站 `[CQ:at,qq=数字]` 转为 `<qqbot-at-user id="OpenID" />`
+- 出站 `[CQ:at,qq=数字]` 转为 `<qqbot-at-user id="OpenID" />`（仅 Markdown 消息，普通文本不转换）
 - q群 纯文本出站消息中 @ 可能不渲染（QQ API 限制）
 
 ### Markdown 中的 @ 能力

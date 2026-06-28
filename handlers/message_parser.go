@@ -1049,23 +1049,6 @@ func transformMessageTextAt(messageText string, groupid string) string {
 	// 使用正则表达式来查找所有[CQ:at,qq=数字]的模式
 	re := regexp.MustCompile(`\[CQ:at,qq=(\d+)\]`)
 	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
-		submatches := re.FindStringSubmatch(m)
-		if len(submatches) > 1 {
-			var realUserID string
-			var err error
-			if config.GetIdmapPro() {
-				_, realUserID, err = idmap.RetrieveRowByIDv2Pro(groupid, submatches[1])
-			} else {
-				realUserID, err = idmap.RetrieveRowByIDv2(submatches[1])
-			}
-			if err != nil {
-				// 如果出错，也替换成相应的格式，但使用原始QQ号
-				mylog.Printf("Error retrieving user ID: %v", err)
-				return "<qqbot-at-user id=\"" + submatches[1] + "\" />"
-			}
-
-			return "<qqbot-at-user id=\"" + realUserID + "\" />"
-		}
 		return m
 	})
 	// 如果内容为空且原始内容仅含 at（不含 reply），退回原始 at 文本
@@ -1105,21 +1088,17 @@ func transformMessageTextAtNoGroupID(messageText string) string {
 	messageText = re.ReplaceAllStringFunc(messageText, func(m string) string {
 		submatches := re.FindStringSubmatch(m)
 		if len(submatches) > 1 {
-			var realUserID string
 			var err error
 			if config.GetIdmapPro() {
 				// 这是个魔法数 代表私聊
-				_, realUserID, err = idmap.RetrieveRowByIDv2Pro("690426430", submatches[1])
+				_, _, err = idmap.RetrieveRowByIDv2Pro("690426430", submatches[1])
 			} else {
-				realUserID, err = idmap.RetrieveRowByIDv2(submatches[1])
+				_, err = idmap.RetrieveRowByIDv2(submatches[1])
 			}
 			if err != nil {
-				// 如果出错，也替换成相应的格式，但使用原始QQ号
 				mylog.Printf("Error retrieving user ID: %v", err)
-				return "<qqbot-at-user id=\"" + submatches[1] + "\" />"
 			}
-
-			return "<qqbot-at-user id=\"" + realUserID + "\" />"
+			return m
 		}
 		return m
 	})
@@ -2231,6 +2210,57 @@ func ProcessCQMemberOutbound(text string, eventID *string, groupID string, apiv2
 	})
 
 	return result, realTargetGroupID, cqUserID
+}
+
+// ProcessCQRemoveOutbound 处理出站 [CQ:remove,user_id=虚拟ID,msg_id=虚拟msg_id]
+// 通过 QQ API 撤回指定消息，并从 messageText 中移除 CQ 码
+func ProcessCQRemoveOutbound(text string, apiv2 openapi.OpenAPI, groupID string) string {
+	re := regexp.MustCompile(`\[CQ:remove,([^\]]*)\]`)
+	return re.ReplaceAllStringFunc(text, func(match string) string {
+		inner := match[1 : len(match)-1]
+		var userID, msgID string
+		for _, part := range strings.Split(inner, ",") {
+			kv := strings.SplitN(part, "=", 2)
+			if len(kv) == 2 {
+				switch strings.TrimSpace(kv[0]) {
+				case "user_id":
+					userID = strings.TrimSpace(kv[1])
+				case "msg_id":
+					msgID = strings.TrimSpace(kv[1])
+				}
+			}
+		}
+		if userID == "" || msgID == "" {
+			mylog.Printf("[CQ:remove] user_id 或 msg_id 为空: %s", match)
+			return match
+		}
+
+		// 解析虚拟 user_id 为真实 OpenID（仅用于校验）
+		_, err := idmap.RetrieveRowByIDv2(userID)
+		if err != nil {
+			mylog.Printf("[CQ:remove] 解析 user_id=%s 失败: %v", userID, err)
+			return ""
+		}
+
+		// 解析虚拟 msg_id 为真实 message_id
+		realMsgID, err := idmap.RetrieveRowByCachev2(msgID)
+		if err != nil {
+			mylog.Printf("[CQ:remove] 解析 msg_id=%s 失败: %v", msgID, err)
+			return ""
+		}
+		// RetrieveRowByCachev2 返回格式 "groupID msgID"，取后半段
+		parts := strings.Split(realMsgID, " ")
+		realMsgID = parts[len(parts)-1]
+
+		// 调用撤回 API
+		if err := apiv2.RetractGroupMessage(context.TODO(), groupID, realMsgID); err != nil {
+			mylog.Printf("[CQ:remove] 撤回消息失败 group=%s msg=%s: %v", groupID, realMsgID, err)
+		} else {
+			mylog.Printf("[CQ:remove] 已撤回消息 group=%s msg=%s", groupID, realMsgID)
+		}
+
+		return "" // 从 messageText 中移除 CQ 码
+	})
 }
 
 // parseMarkdownFromMessage 从 base64 编码的 markdown JSON 数据中解析 dto.Markdown + keyboard

@@ -93,6 +93,10 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 				mylog.Printf("Error storing ID: %v", err)
 				return nil
 			}
+			// 缓存用户名，供出站 [CQ:at,qq=虚拟ID] 转换为 <@username>
+			if data.Author.Username != "" {
+				idmap.StoreUserName(strconv.FormatInt(userid64, 10), data.Author.Username)
+			}
 		}
 	}
 

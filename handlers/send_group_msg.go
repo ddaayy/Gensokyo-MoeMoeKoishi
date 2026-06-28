@@ -430,6 +430,16 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 			if realGroupID != "" {
 				targetGroupID = realGroupID
 			}
+
+			// 处理出站 [CQ:remove] → 撤回消息并从文本中移除 CQ 码
+			messageText = ProcessCQRemoveOutbound(messageText, apiv2, targetGroupID)
+			// 如果处理后 messageText 为空（纯 CQ:remove 消息），直接返回客户端回执
+			if strings.TrimSpace(messageText) == "" && len(foundItems) == 0 {
+				mylog.Printf("[CQ:remove] 纯 CQ 码消息，不发送到 QQ 频道")
+				SendResponse(client, nil, &message, nil, api, apiv2)
+				return "", nil
+			}
+
 			var md *dto.Markdown
 			var kb *keyboard.MessageKeyboard
 			if mdItems, ok := foundItems["markdown"]; ok && len(mdItems) > 0 {

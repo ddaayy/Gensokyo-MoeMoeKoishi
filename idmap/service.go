@@ -37,6 +37,54 @@ var (
 	MutexT sync.Mutex
 )
 
+// usernameCacheItem 存储用户名及其存入时间
+type usernameCacheItem struct {
+	Username  string
+	Timestamp time.Time
+}
+
+// usernameCache 虚拟ID → 用户名的内存缓存，10min 自动过期
+var usernameCache sync.Map
+
+// StartUsernameCacheCleanup 启动定时清理过期 username 缓存（每 5min 执行一次）
+func StartUsernameCacheCleanup() {
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			now := time.Now()
+			usernameCache.Range(func(key, value interface{}) bool {
+				item := value.(usernameCacheItem)
+				if now.Sub(item.Timestamp) > 10*time.Minute {
+					usernameCache.Delete(key)
+				}
+				return true
+			})
+		}
+	}()
+}
+
+// StoreUserName 存储虚拟ID对应的用户名
+func StoreUserName(virtualID, username string) {
+	usernameCache.Store(virtualID, usernameCacheItem{
+		Username:  username,
+		Timestamp: time.Now(),
+	})
+}
+
+// GetUserName 获取虚拟ID对应的用户名，过期或不存在返回空串
+func GetUserName(virtualID string) string {
+	v, ok := usernameCache.Load(virtualID)
+	if !ok {
+		return ""
+	}
+	item := v.(usernameCacheItem)
+	if time.Since(item.Timestamp) > 10*time.Minute {
+		usernameCache.Delete(virtualID)
+		return ""
+	}
+	return item.Username
+}
+
 const (
 	DBName          = "idmap.db"
 	BucketName      = "ids"
