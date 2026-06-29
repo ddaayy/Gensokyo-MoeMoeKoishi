@@ -391,8 +391,7 @@ func ensureConfigComplete(path string) error {
 			return err
 		}
 
-		fmt.Println("检测到配置文件缺少项。已经更新配置文件，正在重启程序以应用新的配置。")
-		sys.RestartApplication()
+		fmt.Println("检测到配置文件缺少项。已经更新配置文件 (config.yml)，无需重启，程序将继续正常运行。")
 	}
 
 	return nil
