@@ -571,8 +571,10 @@ func cleanupDuplicateSettings(data []byte) []byte {
 		}
 	}
 
-	fmt.Printf("[config] 配置文件损坏且无法自动修复，请手动修复 config.yml\n")
-	return data
+	fmt.Printf("[config] 配置文件损坏且无法自动修复，已用默认模板覆盖，旧文件备份为 config.bak.yml\n")
+	backup := strings.NewReplacer("\r\n", "\n", "\r", "").Replace(string(data))
+	_ = os.WriteFile("config.bak.yml", []byte(backup), 0644)
+	return []byte(template.ConfigTemplate)
 }
 
 func isZeroOfUnderlyingType(x interface{}) bool {
