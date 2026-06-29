@@ -57,6 +57,12 @@ func LoadConfig(path string, fastload bool) (*Config, error) {
 		return nil, err
 	}
 
+	// 清理配置文件中因旧版 bug 产生的重复 settings:/version 行
+	if cleaned := cleanupDuplicateSettings(configData); len(cleaned) != len(configData) {
+		configData = cleaned
+		_ = os.WriteFile(path, configData, 0644)
+	}
+
 	// 检查并替换视觉前缀行，如果有必要，后期会注释
 	// var isChange bool
 	// configData, isChange = replaceVisualPrefixsLine(configData)
@@ -386,12 +392,15 @@ func ensureConfigComplete(path string) error {
 		}
 
 		// 将缺失的配置追加到现有配置文件
-		err = appendToConfigFile(path, missingConfigLines)
+		written, err := appendToConfigFile(path, missingConfigLines)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println("检测到配置文件缺少项。已经更新配置文件 (config.yml)，无需重启，程序将继续正常运行。")
+		if written > 0 {
+			fmt.Println("检测到配置文件缺少项。已经更新配置文件，正在重启程序以应用新的配置。")
+			sys.RestartApplication()
+		}
 	}
 
 	return nil
@@ -414,10 +423,14 @@ func getMissingSettingsByReflection(currentConfig, defaultConfig *Config) (map[s
 	for i := 0; i < currentVal.NumField(); i++ {
 		field := currentVal.Type().Field(i)
 		yamlTag := field.Tag.Get("yaml")
-		if yamlTag == "" || field.Type.Kind() == reflect.Int || field.Type.Kind() == reflect.Bool || field.Type.Kind() == reflect.Struct {
-			continue // 跳过没有yaml标签的字段，或者字段类型为int/bool/struct（struct子字段由文本比对覆盖）
+		if yamlTag == "" || field.Type.Kind() == reflect.Int || field.Type.Kind() == reflect.Bool {
+			continue // 跳过没有yaml标签的字段，或者字段类型为int或bool
 		}
 		yamlKeyName := strings.SplitN(yamlTag, ",", 2)[0]
+		// 跳过结构体类型的字段（如 Settings），无法通过追加一行来修复
+		if currentVal.Field(i).Kind() == reflect.Struct {
+			continue
+		}
 		if isZeroOfUnderlyingType(currentVal.Field(i).Interface()) && !isZeroOfUnderlyingType(defaultVal.Field(i).Interface()) {
 			missingSettings[yamlKeyName] = "missing"
 		}
@@ -482,78 +495,125 @@ func extractMissingConfigLines(missingSettings map[string]string, configTemplate
 	return missingConfigLines, nil
 }
 
-func appendToConfigFile(path string, lines []string) error {
-	// 先读取现有内容
+func appendToConfigFile(path string, lines []string) (int, error) {
+	// 先读取现有内容，用于去重
 	existingBytes, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	existingContent := string(existingBytes)
-	contentLines := strings.Split(existingContent, "\n")
 
-	// 找到 settings: 块内最后一个有效行，在其后插入缺失配置
-	insertAt := -1
-	inSettings := false
-
-	for i, line := range contentLines {
-		trimmed := strings.TrimSpace(line)
-		if !inSettings && trimmed == "settings:" {
-			inSettings = true
-			continue
-		}
-		if inSettings {
-			// 跳过空行和注释
-			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-				continue
-			}
-			// 如果缩进回到顶层（缩进<2空格），说明settings块结束
-			stripped := strings.TrimLeft(line, " ")
-			if len(line)-len(stripped) < 2 && strings.Contains(line, ":") {
-				insertAt = i
-				inSettings = false
-				break
-			}
-			// 否则记录当前位置（settings内最后一个有效行的下一行）
-			insertAt = i + 1
-		}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		fmt.Println("打开文件错误:", err)
+		return 0, err
 	}
-	if insertAt < 0 {
-		insertAt = len(contentLines)
-	}
+	defer file.Close()
 
-	// 插入缺失的配置项（去重 + 缩进到settings块内）
-	inserted := 0
+	// 写入缺失的配置项（去重）
+	written := 0
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
-			continue
-		}
-		// 跳过 settings: 本身（结构键，不应追加）
-		if trimmed == "settings:" {
 			continue
 		}
 		// 检查该行是否已存在于文件中
 		if strings.Contains(existingContent, trimmed) {
 			continue
 		}
-		// 用2空格缩进，使其嵌套在 settings: 块内
-		indentedLine := "  " + trimmed
-		// 在 insertAt 位置插入
-		contentLines = append(contentLines[:insertAt], append([]string{indentedLine}, contentLines[insertAt:]...)...)
-		insertAt++
-		inserted++
+		if _, err := file.WriteString("\n" + line); err != nil {
+			fmt.Println("写入配置错误:", err)
+			return written, err
+		}
+		written++
 	}
 
-	if inserted > 0 {
-		result := strings.Join(contentLines, "\n")
-		if err := os.WriteFile(path, []byte(result), 0644); err != nil {
-			fmt.Println("写入配置错误:", err)
-			return err
-		}
+	// 输出写入状态
+	if written > 0 {
 		fmt.Println("配置已更新，写入到文件:", path)
 	}
 
-	return nil
+	return written, nil
+}
+
+// cleanupDuplicateSettings 清理配置文件中因旧版 bug 产生的异常。
+// 1. 删除重复的 settings: 行（截断到第一个 settings: 块末尾）
+// 2. 如果文件开头缺少 version:/settings: 顶层 key，自动补全
+func cleanupDuplicateSettings(data []byte) []byte {
+	content := string(data)
+	// 统一换行符为 \n，移除 \r
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.ReplaceAll(content, "\r", "")
+	lines := strings.Split(content, "\n")
+
+	// 第一步：查找并删除重复的 settings: 行
+	settingsCount := 0
+	cutIndex := -1
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "settings:" {
+			settingsCount++
+			if settingsCount == 2 {
+				cutIndex = i
+				break
+			}
+		}
+	}
+	if cutIndex > 0 {
+		lines = lines[:cutIndex]
+		content = strings.Join(lines, "\n")
+		fmt.Printf("[config] 检测到重复的 settings: 行，已截断\n")
+	}
+
+	// 第二步：检查文件开头是否以 version:/settings: 开头
+	firstNonEmpty := -1
+	hasVersion := false
+	hasSettings := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if firstNonEmpty < 0 {
+			firstNonEmpty = i
+		}
+		if trimmed == "version:" || strings.HasPrefix(trimmed, "version:") {
+			hasVersion = true
+		}
+		if trimmed == "settings:" {
+			hasSettings = true
+		}
+	}
+
+	// 如果第一个非空非注释行不是 version: 或 settings:，说明顶层 key 丢失
+	if firstNonEmpty >= 0 {
+		trimmed := strings.TrimSpace(lines[firstNonEmpty])
+		if trimmed != "settings:" && trimmed != "version:" {
+			// 文件结构损坏，重建：version + settings + 原内容缩进
+			var rebuilt []string
+			if !hasVersion {
+				rebuilt = append(rebuilt, "version: 1")
+			}
+			if !hasSettings {
+				rebuilt = append(rebuilt, "settings:")
+			}
+			for _, line := range lines {
+				trimmed := strings.TrimSpace(line)
+				if trimmed == "" || trimmed == "settings:" || strings.HasPrefix(trimmed, "version:") {
+					continue
+				}
+				if strings.HasPrefix(trimmed, "#") {
+					rebuilt = append(rebuilt, line) // 注释原样保留
+				} else {
+					rebuilt = append(rebuilt, "  "+trimmed) // 内容缩进两层
+				}
+			}
+			content = strings.Join(rebuilt, "\n") + "\n"
+			fmt.Printf("[config] 检测到配置文件结构损坏，已重建\n")
+		}
+	}
+
+	return []byte(content)
 }
 
 func isZeroOfUnderlyingType(x interface{}) bool {
