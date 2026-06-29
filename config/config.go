@@ -540,80 +540,37 @@ func appendToConfigFile(path string, lines []string) (int, error) {
 // 1. 删除重复的 settings: 行（截断到第一个 settings: 块末尾）
 // 2. 如果文件开头缺少 version:/settings: 顶层 key，自动补全
 func cleanupDuplicateSettings(data []byte) []byte {
-	content := string(data)
-	// 统一换行符为 \n，移除 \r
-	content = strings.ReplaceAll(content, "\r\n", "\n")
-	content = strings.ReplaceAll(content, "\r", "")
+	// 尝试直接解析，成功且有效则不需要修复
+	conf := &Config{}
+	if yaml.Unmarshal(data, conf) == nil && conf.Version > 0 {
+		return data
+	}
+
+	// 文件损坏：找到 settings: 行后截断，用 yaml 库重新 Marshal
+	content := strings.NewReplacer("\r\n", "\n", "\r", "").Replace(string(data))
 	lines := strings.Split(content, "\n")
-
-	// 第一步：查找并删除重复的 settings: 行
-	settingsCount := 0
-	cutIndex := -1
+	cut := -1
 	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "settings:" {
-			settingsCount++
-			if settingsCount == 2 {
-				cutIndex = i
-				break
-			}
+		if strings.TrimSpace(line) == "settings:" {
+			cut = i
+			break
 		}
 	}
-	if cutIndex > 0 {
-		lines = lines[:cutIndex]
-		content = strings.Join(lines, "\n")
-		fmt.Printf("[config] 检测到重复的 settings: 行，已截断\n")
+	if cut < 0 {
+		return data
 	}
 
-	// 第二步：检查文件开头是否以 version:/settings: 开头
-	firstNonEmpty := -1
-	hasVersion := false
-	hasSettings := false
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-			continue
-		}
-		if firstNonEmpty < 0 {
-			firstNonEmpty = i
-		}
-		if trimmed == "version:" || strings.HasPrefix(trimmed, "version:") {
-			hasVersion = true
-		}
-		if trimmed == "settings:" {
-			hasSettings = true
+	rebuildData := strings.Join(lines[cut:], "\n")
+	rebuildConf := &Config{}
+	if yaml.Unmarshal([]byte(rebuildData), rebuildConf) == nil && rebuildConf.Version > 0 {
+		if marshal, err := yaml.Marshal(rebuildConf); err == nil {
+			fmt.Printf("[config] 检测到配置文件损坏，已自动重建\n")
+			return marshal
 		}
 	}
 
-	// 如果第一个非空非注释行不是 version: 或 settings:，说明顶层 key 丢失
-	if firstNonEmpty >= 0 {
-		trimmed := strings.TrimSpace(lines[firstNonEmpty])
-		if trimmed != "settings:" && trimmed != "version:" {
-			// 文件结构损坏，重建：version + settings + 原内容缩进
-			var rebuilt []string
-			if !hasVersion {
-				rebuilt = append(rebuilt, "version: 1")
-			}
-			if !hasSettings {
-				rebuilt = append(rebuilt, "settings:")
-			}
-			for _, line := range lines {
-				trimmed := strings.TrimSpace(line)
-				if trimmed == "" || trimmed == "settings:" || strings.HasPrefix(trimmed, "version:") {
-					continue
-				}
-				if strings.HasPrefix(trimmed, "#") {
-					rebuilt = append(rebuilt, line) // 注释原样保留
-				} else {
-					rebuilt = append(rebuilt, "  "+trimmed) // 内容缩进两层
-				}
-			}
-			content = strings.Join(rebuilt, "\n") + "\n"
-			fmt.Printf("[config] 检测到配置文件结构损坏，已重建\n")
-		}
-	}
-
-	return []byte(content)
+	fmt.Printf("[config] 配置文件损坏且无法自动修复，请手动修复 config.yml\n")
+	return data
 }
 
 func isZeroOfUnderlyingType(x interface{}) bool {
