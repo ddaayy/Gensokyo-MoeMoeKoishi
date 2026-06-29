@@ -560,7 +560,9 @@ func cleanupDuplicateSettings(data []byte) []byte {
 		return data
 	}
 
-	rebuildData := strings.Join(lines[cut:], "\n")
+	// 保留 settings: 之前的内容（那才是配置数据），补上顶层 key
+	prefix := "version: 1\nsettings:\n"
+	rebuildData := prefix + strings.Join(lines[:cut], "\n") + "\n"
 	rebuildConf := &Config{}
 	if yaml.Unmarshal([]byte(rebuildData), rebuildConf) == nil && rebuildConf.Version > 0 {
 		if marshal, err := yaml.Marshal(rebuildConf); err == nil {
