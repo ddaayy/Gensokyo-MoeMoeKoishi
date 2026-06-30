@@ -86,9 +86,8 @@ function Invoke-GensokyoBuild {
 
     $ext = if ($Target.GOOS -eq 'windows') { '.exe' } else { '' }
     $small = -not $NoSmall
-    $nameSuffix = if ($small) { '-small' } else { '' }
     $tagArg = if ($small) { '-tags=small' } else { '' }
-    $outName = "gensokyo$nameSuffix-$($Target.OS)-$($Target.Arch)$ext"
+    $outName = "gensokyo-$($Target.OS)-$($Target.Arch)$ext"
 
     Write-Host "[build] $($Target.GOOS)/$($Target.GOARCH) -> $outName" -ForegroundColor Yellow
     go build -trimpath -ldflags="$Ldflags" $tagArg -v -o $outName .
