@@ -450,6 +450,7 @@ settings:
 
 - [`mnixry/nonebot-plugin-gocqhttp`](https://github.com/mnixry/nonebot-plugin-gocqhttp/): 本项目采用了mnixry编写的前端并实现了与它对应的基于qq官方api的后端api.
 - 特别鸣谢[`dk 盾`](https://www.dkdun.cn/),友情赞助服务器资源
+- 感谢[`Gensokyo`](https://github.com/Hoshinonyaruko/Gensokyo/)
 
 ## 引用
 
