@@ -25,7 +25,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$env:GOPROXY = 'https://goproxy.cn,direct'
+$env:GOPROXY = 'https://mirrors.aliyun.com/goproxy,https://goproxy.cn,https://mirrors.tuna.tsinghua.edu.cn/goproxy,direct'
 $env:GOFLAGS = '-mod=mod'
 $env:CGO_ENABLED = '0'
 
