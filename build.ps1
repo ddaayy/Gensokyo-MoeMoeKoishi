@@ -2,10 +2,10 @@
 # Single target:
 #   .\build.ps1
 #   .\build.ps1 linux amd64
-# All default targets:
+#   .\build.ps1 -NoWebUI
+# All default targets (双版本: 完整版 + noWebUI):
 #   .\build.ps1 -All
 #   .\build.ps1 -LinuxOnly
-# Default is -Small (精简版)，用 -NoSmall 编译完整版
 
 param(
     [Parameter(Position = 0)]
@@ -20,7 +20,7 @@ param(
     [switch]$All,
     [switch]$LinuxOnly,
     [switch]$NoUPX,
-    [switch]$NoSmall
+    [switch]$NoWebUI
 )
 
 $ErrorActionPreference = 'Stop'
@@ -78,16 +78,16 @@ function Invoke-GensokyoBuild {
         [Parameter(Mandatory = $true)]
         [string]$Ldflags,
 
-        [switch]$NoSmall
+        [switch]$NoWebUI
     )
 
     $env:GOOS = $Target.GOOS
     $env:GOARCH = $Target.GOARCH
 
     $ext = if ($Target.GOOS -eq 'windows') { '.exe' } else { '' }
-    $small = -not $NoSmall
-    $tagArg = if ($small) { '-tags=small' } else { '' }
-    $outName = "gensokyo-$($Target.OS)-$($Target.Arch)$ext"
+    $suffix = if ($NoWebUI) { '-noWebui' } else { '' }
+    $tagArg = if ($NoWebUI) { '-tags=small' } else { '' }
+    $outName = "gensokyo-$($Target.OS)-$($Target.Arch)$suffix$ext"
 
     Write-Host "[build] $($Target.GOOS)/$($Target.GOARCH) -> $outName" -ForegroundColor Yellow
     go build -trimpath -ldflags="$Ldflags" $tagArg -v -o $outName .
@@ -160,8 +160,14 @@ $outputs = @()
 $failed = @()
 foreach ($target in $targets) {
     try {
-        $noSmallParam = if ($NoSmall) { @{ NoSmall = $true } } else { @{} }
-        $outputs += Invoke-GensokyoBuild -Target $target -Ldflags $ldflags @noSmallParam
+        if ($All) {
+            # -All 构建双版本: 完整版 + noWebUI
+            $outputs += Invoke-GensokyoBuild -Target $target -Ldflags $ldflags
+            $outputs += Invoke-GensokyoBuild -Target $target -Ldflags $ldflags -NoWebUI
+        } else {
+            $noWebUIParam = if ($NoWebUI) { @{ NoWebUI = $true } } else { @{} }
+            $outputs += Invoke-GensokyoBuild -Target $target -Ldflags $ldflags @noWebUIParam
+        }
     } catch {
         $failed += "$($target.GOOS)/$($target.GOARCH)"
         Write-Host "  FAILED: $($target.GOOS)/$($target.GOARCH)" -ForegroundColor Red
