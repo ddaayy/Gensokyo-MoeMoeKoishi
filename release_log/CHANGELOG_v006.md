@@ -16,6 +16,20 @@
 - 支持 `--version` 查看版本信息
 - 可禁用 status/broadcast 命令
 
+### Idmap 多对多映射重构 (PR #6)
+- 从"一对一"重构为"多对多"身份存储，支持同一 OpenID 映射多个虚拟 ID
+- 新增消息映射日志和迁移统计
+- 不映射未知 @mention，新增转换配置开关
+
+### 日志增强 & Ob11 Mock API
+- Master 命令支持
+- Ob11 Mock API 接口（兼容调试）
+- 日志指标统计增强
+
+### QQ 群追踪
+- 新增群聊消息全量接收状态追踪（窗口大小=10）
+- 支持 `RecordQQGroupMessageReception` 全量消息记录
+
 ### 消息队列 & 限流器
 - 新增 `messagequeue` 包，基于 `golang.org/x/time/rate` 实现限流
 - 批量消息发送时自动排队
@@ -93,12 +107,12 @@ GOPROXY = 阿里云 → goproxy.cn → 清华 → direct
 
 ---
 
-## 📝 文档
+## 📝 文档 & 合规
 
 - 扩展 CQ 码汇总更新
 - API 介绍文档补充 `delete_msg` / `delete_group_msg`
 - idmap 文档标注实际运行状态
-- 新增功能文档全面更新
+- LICENSE 更换，新增 CODE_OF_CONDUCT.md
 
 ---
 
