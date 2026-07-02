@@ -1,6 +1,6 @@
 # Changelog — Release006 (since Release005)
 
-> 自 `Release005` 以来的所有变更。提交范围: `Release005..69c358d`
+> 自 `Release005` 以来的所有变更。提交范围: `Release005..6d987d6`
 
 ---
 
@@ -103,9 +103,21 @@ GOPROXY = 阿里云 → goproxy.cn → 清华 → direct
 
 ---
 
-## 🔄 提交记录 (摘要)
+## � 编译输出规范化
+
+- **输出目录** — 所有编译产物统一输出到 `release/` 目录
+- **清理根目录** — 移除根目录残留的 Linux 二进制（`gensokyo-linux-*`）和空文件 `go`
+- **文件整理** — `CHANGELOG.md` → `release_log/`，`CODE_OF_CONDUCT.md` → `docs/`
+- **`.gitignore`** — 添加 `release/` 忽略规则
+
+---
+
+## �🔄 提交记录 (摘要)
 
 ```
+c94b84e  编译输出到release/目录，清理旧测试编译
+e34aa5f  清理根目录残留Linux二进制和空文件go
+6d987d6  移动CHANGELOG.md/CODE_OF_CONDUCT.md到对应目录
 7351c8b  buildinfo, command prefixes, logging revamp
 9a6c7d3  Refactor build scripts, improve log rotation
 162e91f  delete_group_msg (OneBot V11 semantic)
