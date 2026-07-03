@@ -943,36 +943,19 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 		}
 
 		base64Encoded := base64.StdEncoding.EncodeToString(RecordData)
-		if config.GetUploadPicV2Base64() {
-			// 直接上传语音返回 MessageToCreate type=7
-			messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 3, false, "", groupid, id, msgseq, apiv2)
-			if err != nil {
-				mylog.Printf("Error messageToCreate: %v", err)
-				return &dto.MessageToCreate{
-					Content: "错误: 上传语音失败",
-					MsgID:   id,
-					EventID: eventid,
-					MsgSeq:  msgseq,
-					MsgType: 0, // 默认文本类型
-				}
-			}
-			return messageToCreate
-		}
-
-		// 将解码的语音数据转换回base64格式并上传
-		imageURL, err := images.UploadBase64RecordToServer(base64Encoded)
+		// 语音直接 base64 上传到 QQ CDN，不需要本地图床中转
+		messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 3, false, "", groupid, id, msgseq, apiv2)
 		if err != nil {
-			mylog.Printf("failed to upload base64 record: %v", err)
-			return nil
+			mylog.Printf("Error messageToCreate: %v", err)
+			return &dto.MessageToCreate{
+				Content: "错误: 上传语音失败",
+				MsgID:   id,
+				EventID: eventid,
+				MsgSeq:  msgseq,
+				MsgType: 0, // 默认文本类型
+			}
 		}
-		// 创建RichMediaMessage并返回
-		return &dto.RichMediaMessage{
-			EventID:    id,
-			FileType:   3, // 3代表语音
-			URL:        imageURL,
-			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: false,
-		}
+		return messageToCreate
 	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
 		var newpiclink string
 		if config.GetUrlPicTransfer() {
@@ -1171,35 +1154,19 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 				}
 			}
 			base64Encoded := base64.StdEncoding.EncodeToString(fileRecordData)
-			if config.GetUploadPicV2Base64() {
-				// 直接上传语音返回 MessageToCreate type=7
-				messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 3, false, "", groupid, id, msgseq, apiv2)
-				if err != nil {
-					mylog.Printf("Error messageToCreate: %v", err)
-					return &dto.MessageToCreate{
-						Content: "错误: 上传语音失败",
-						MsgID:   id,
-						EventID: eventid,
-						MsgSeq:  msgseq,
-						MsgType: 0, // 默认文本类型
-					}
-				}
-				return messageToCreate
-			}
-			// 将解码的语音数据转换回base64格式并上传
-			imageURL, err := images.UploadBase64RecordToServer(base64Encoded)
+			// 语音直接 base64 上传到 QQ CDN，不需要本地图床中转
+			messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Encoded, eventid, 3, false, "", groupid, id, msgseq, apiv2)
 			if err != nil {
-				mylog.Printf("failed to upload base64 record: %v", err)
-				return nil
+				mylog.Printf("Error messageToCreate: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 上传语音失败",
+					MsgID:   id,
+					EventID: eventid,
+					MsgSeq:  msgseq,
+					MsgType: 0, // 默认文本类型
+				}
 			}
-			// 创建RichMediaMessage并返回
-			return &dto.RichMediaMessage{
-				EventID:    id,
-				FileType:   3, // 3代表语音
-				URL:        imageURL,
-				Content:    "", // 这个字段文档没有了
-				SrvSendMsg: false,
-			}
+			return messageToCreate
 		}
 	} else if imageURLs, ok := foundItems["url_record"]; ok && len(imageURLs) > 0 {
 		// 从URL下载语音
@@ -1579,36 +1546,19 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 		}
 
 		base64Encoded := base64.StdEncoding.EncodeToString(RecordData)
-		if config.GetUploadPicV2Base64() {
-			// 直接上传语音返回 MessageToCreate type=7
-			messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Encoded, eventid, 3, false, "", userid, id, msgseq, apiv2)
-			if err != nil {
-				mylog.Printf("Error messageToCreate: %v", err)
-				return &dto.MessageToCreate{
-					Content: "错误: 上传语音失败",
-					MsgID:   id,
-					EventID: eventid,
-					MsgSeq:  msgseq,
-					MsgType: 0, // 默认文本类型
-				}
-			}
-			return messageToCreate
-		}
-
-		// 将解码的语音数据转换回base64格式并上传
-		imageURL, err := images.UploadBase64RecordToServer(base64Encoded)
+		// 语音直接 base64 上传到 QQ CDN，不需要本地图床中转
+		messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Encoded, eventid, 3, false, "", userid, id, msgseq, apiv2)
 		if err != nil {
-			mylog.Printf("failed to upload base64 record: %v", err)
-			return nil
+			mylog.Printf("Error messageToCreate: %v", err)
+			return &dto.MessageToCreate{
+				Content: "错误: 上传语音失败",
+				MsgID:   id,
+				EventID: eventid,
+				MsgSeq:  msgseq,
+				MsgType: 0, // 默认文本类型
+			}
 		}
-		// 创建RichMediaMessage并返回
-		return &dto.RichMediaMessage{
-			EventID:    id,
-			FileType:   3, // 3代表语音
-			URL:        imageURL,
-			Content:    "", // 这个字段文档没有了
-			SrvSendMsg: false,
-		}
+		return messageToCreate
 	} else if imageURLs, ok := foundItems["url_image"]; ok && len(imageURLs) > 0 {
 		var newpiclink string
 		if config.GetUrlPicTransfer() {
@@ -1807,35 +1757,19 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 				}
 			}
 			base64Encoded := base64.StdEncoding.EncodeToString(fileRecordData)
-			if config.GetUploadPicV2Base64() {
-				// 直接上传语音返回 MessageToCreate type=7
-				messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Encoded, eventid, 3, false, "", userid, id, msgseq, apiv2)
-				if err != nil {
-					mylog.Printf("Error messageToCreate: %v", err)
-					return &dto.MessageToCreate{
-						Content: "错误: 上传语音失败",
-						MsgID:   id,
-						EventID: eventid,
-						MsgSeq:  msgseq,
-						MsgType: 0, // 默认文本类型
-					}
-				}
-				return messageToCreate
-			}
-			// 将解码的语音数据转换回base64格式并上传
-			imageURL, err := images.UploadBase64RecordToServer(base64Encoded)
+			// 语音直接 base64 上传到 QQ CDN，不需要本地图床中转
+			messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Encoded, eventid, 3, false, "", userid, id, msgseq, apiv2)
 			if err != nil {
-				mylog.Printf("failed to upload base64 record: %v", err)
-				return nil
+				mylog.Printf("Error messageToCreate: %v", err)
+				return &dto.MessageToCreate{
+					Content: "错误: 上传语音失败",
+					MsgID:   id,
+					EventID: eventid,
+					MsgSeq:  msgseq,
+					MsgType: 0, // 默认文本类型
+				}
 			}
-			// 创建RichMediaMessage并返回
-			return &dto.RichMediaMessage{
-				EventID:    id,
-				FileType:   3, // 3代表语音
-				URL:        imageURL,
-				Content:    "", // 这个字段文档没有了
-				SrvSendMsg: false,
-			}
+			return messageToCreate
 		}
 	} else if imageURLs, ok := foundItems["url_record"]; ok && len(imageURLs) > 0 {
 		// 从URL下载语音
