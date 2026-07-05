@@ -28,6 +28,30 @@
 - C2C 私聊同路径 → `CreateAndUploadMediaMessagePrivate`
 - 共约 -350 行冗余代码
 
+### MP3 ID3 标签头未识别
+
+- `detectAudioFormat` 未识别以 `ID3` 标签头开头的 MP3 文件，导致语音转码失败
+- 修复：新增 ID3v2 头检测，正确识别为 MP3 格式，走 `go-mp3` 纯 Go 解码器
+
+---
+
+## 🎨 WebUI 视觉重构 (PR #9)
+
+- **颜色体系更新** — 去掉紫色渐变，改用更克制、适合运维面板的蓝/青/紫色系
+- **Health strip** — 仪表盘顶部新增状态条，关键指标一目了然
+- **布局打磨** — 卡片 hover 效果、响应式布局、阴影去除
+- **Login 页面精简** — 减少装饰性元素，更聚焦
+- **LogsConsole 重连修复** — 修复 reconnect 事件未正确绑定的 bug
+- **clean checkout 兼容** — 新增 `webui/dist` 占位文件确保 `go:embed` 在未构建前端时也能通过编译
+- **`go vet` 兼容** — 修复 `fmt.Errorf` 非恒定格式字符串，通过 Go 1.26+ 校验
+
+---
+
+## 🔧 工程化改进
+
+- `.gitignore` 修复编码错误，添加 `webui/dist` 占位文件忽略规则
+- 停止跟踪 `webui/dist` 占位文件，由 `build.ps1 Ensure-WebUIDist` 自动创建
+
 ---
 
 ## ✅ 提交记录
@@ -35,4 +59,9 @@
 ```
 6a59179  语音统一直接base64上传QQ CDN
 b68957c  图片统一直接base64上传QQ CDN，仅Markdown用图床
+7866c0b  detectAudioFormat 识别ID3标签头的MP3文件
+00d325b  PR #9: fix tests and refine webui
+576bc9f  修复.gitignore编码错误
+2983b4b  停止跟踪webui/dist占位文件
+6a56b73  最终清理webui/dist跟踪状态
 ```
