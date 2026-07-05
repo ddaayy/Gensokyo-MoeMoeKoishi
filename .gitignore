@@ -29,3 +29,11 @@ data/.vscode/
 
 # Build output
 release/
+
+# webui placeholder (auto-created by build.ps1 Ensure-WebUIDist)
+webui/dist/placeholder.html
+webui/dist/index.html
+webui/dist/css/placeholder.css
+webui/dist/fonts/placeholder.txt
+webui/dist/icons/placeholder.txt
+webui/dist/js/placeholder.js
