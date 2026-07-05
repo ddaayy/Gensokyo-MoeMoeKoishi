@@ -66,7 +66,7 @@
         </q-card-section>
         <q-card-section class="gsk-stat-body">
           <div class="gsk-stat-value">
-            {{ status?.memory.percent }}<span class="gsk-stat-unit">%</span>
+            {{ status?.memory.percent.toFixed(2) }}<span class="gsk-stat-unit">%</span>
           </div>
           <div class="gsk-stat-detail">
             <span>{{ formatBytes(status?.memory.used ?? 0) }} / {{ formatBytes(status?.memory.total ?? 0) }}</span>
@@ -89,7 +89,7 @@
         </q-card-section>
         <q-card-section class="gsk-stat-body">
           <div class="gsk-stat-value">
-            {{ status?.disk.percent }}<span class="gsk-stat-unit">%</span>
+            {{ status?.disk.percent.toFixed(2) }}<span class="gsk-stat-unit">%</span>
           </div>
           <div class="gsk-stat-detail">
             <span>{{ formatBytes(status?.disk.free ?? 0) }} / {{ formatBytes(status?.disk.total ?? 0) }}</span>
@@ -190,6 +190,10 @@ const LEGEND_NAMES = {
     chart: {
       toolbar: { show: false },
       fontFamily: 'Inter, sans-serif',
+      animations: {
+        animateGradually: { enabled: false },
+        dynamicAnimation: { enabled: true, speed: 300 },
+      },
     },
     dataLabels: { enabled: false },
     xaxis: {
@@ -213,7 +217,7 @@ const LEGEND_NAMES = {
   },
   chartSeries = Object.values(LEGEND_NAMES).map((name) => ({
     name,
-    data: [] as { x: number; y: number }[],
+    data: [{ x: Date.now(), y: 0 }] as { x: number; y: number }[],
   })),
   chart = ref<VueApexChartsComponent>();
 
@@ -223,8 +227,8 @@ function formatBytes(bytes: number, decimals = 2) {
   const dm = decimals < 0 ? 0 : decimals;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const val = parseFloat((bytes / Math.pow(k, i)).toFixed(dm));
-  return String(val) + ' ' + sizes[i];
+  const val = (bytes / Math.pow(k, i)).toFixed(dm);
+  return val + ' ' + sizes[i];
 }
 
 let updateTimer: number;

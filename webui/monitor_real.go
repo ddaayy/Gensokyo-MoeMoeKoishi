@@ -40,6 +40,7 @@ func handleSysInfo(c *gin.Context) {
 		"memory": gin.H{
 			"total":     vmStat.Total,       // 总内存
 			"available": vmStat.Available,   // 可用内存
+			"used":      vmStat.Total - vmStat.Available, // 已用内存
 			"percent":   vmStat.UsedPercent, // 内存使用率
 		},
 		"disk": gin.H{

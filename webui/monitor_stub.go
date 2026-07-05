@@ -15,6 +15,7 @@ func handleSysInfo(c *gin.Context) {
 		"memory": gin.H{
 			"total":     0,
 			"available": 0,
+			"used":      0,
 			"percent":   0.0,
 		},
 		"disk": gin.H{

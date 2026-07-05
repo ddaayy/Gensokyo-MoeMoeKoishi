@@ -2,7 +2,8 @@
 # Single target:
 #   .\build.ps1
 #   .\build.ps1 linux amd64
-# All default targets:
+#   .\build.ps1 -NoWebUI
+# All default targets (双版本: 完整版 + noWebUI):
 #   .\build.ps1 -All
 #   .\build.ps1 -LinuxOnly
 
@@ -19,14 +20,19 @@ param(
     [switch]$All,
     [switch]$LinuxOnly,
     [switch]$NoUPX,
-    [switch]$Small
+    [switch]$NoWebUI
 )
 
 $ErrorActionPreference = 'Stop'
 
-$env:GOPROXY = 'https://goproxy.cn,direct'
+$env:GOPROXY = 'https://mirrors.aliyun.com/goproxy,https://goproxy.cn,https://mirrors.tuna.tsinghua.edu.cn/goproxy,direct'
 $env:GOFLAGS = '-mod=mod'
 $env:CGO_ENABLED = '0'
+
+# 兼容 --xxx 写法（PowerShell 标准是 -xxx）
+if ($TargetOS -match '^--?[Aa]ll$') { $All = $true; $TargetOS = '' }
+if ($TargetOS -match '^--?[Nn]o[Ww]eb[Uu][Ii]$') { $NoWebUI = $true; $TargetOS = '' }
+if ($TargetArch -match '^--?[Nn]o[Ww]eb[Uu][Ii]$') { $NoWebUI = $true; $TargetArch = '' }
 
 if ($TargetOS -eq 'all') {
     $All = $true
@@ -77,26 +83,27 @@ function Invoke-GensokyoBuild {
         [Parameter(Mandatory = $true)]
         [string]$Ldflags,
 
-        [switch]$Small
+        [switch]$NoWebUI
     )
 
     $env:GOOS = $Target.GOOS
     $env:GOARCH = $Target.GOARCH
 
     $ext = if ($Target.GOOS -eq 'windows') { '.exe' } else { '' }
-    $nameSuffix = if ($Small) { '-small' } else { '' }
-    $tagArg = if ($Small) { '-tags=small' } else { '' }
-    $outName = "gensokyo$nameSuffix-$($Target.OS)-$($Target.Arch)$ext"
+    $suffix = if ($NoWebUI) { '-noWebui' } else { '' }
+    $tagArg = if ($NoWebUI) { '-tags=small' } else { '' }
+    $outName = "gensokyo-$($Target.OS)-$($Target.Arch)$suffix$ext"
+    $outPath = "release/$outName"
 
-    Write-Host "[build] $($Target.GOOS)/$($Target.GOARCH) -> $outName" -ForegroundColor Yellow
-    go build -trimpath -ldflags="$Ldflags" $tagArg -v -o $outName .
+    Write-Host "[build] $($Target.GOOS)/$($Target.GOARCH) -> $outPath" -ForegroundColor Yellow
+    go build -trimpath -ldflags="$Ldflags" $tagArg -v -o $outPath .
 
     if ($LASTEXITCODE -ne 0) {
         throw "Build failed: $($Target.GOOS)/$($Target.GOARCH)"
     }
 
-    Write-Host "  OK: $outName" -ForegroundColor Green
-    return $outName
+    Write-Host "  OK: $outPath" -ForegroundColor Green
+    return $outPath
 }
 
 function Invoke-Upx {
@@ -159,8 +166,14 @@ $outputs = @()
 $failed = @()
 foreach ($target in $targets) {
     try {
-        $smallParam = if ($Small) { @{ Small = $true } } else { @{} }
-        $outputs += Invoke-GensokyoBuild -Target $target -Ldflags $ldflags @smallParam
+        if ($All) {
+            # -All 构建双版本: 完整版 + noWebUI
+            $outputs += Invoke-GensokyoBuild -Target $target -Ldflags $ldflags
+            $outputs += Invoke-GensokyoBuild -Target $target -Ldflags $ldflags -NoWebUI
+        } else {
+            $noWebUIParam = if ($NoWebUI) { @{ NoWebUI = $true } } else { @{} }
+            $outputs += Invoke-GensokyoBuild -Target $target -Ldflags $ldflags @noWebUIParam
+        }
     } catch {
         $failed += "$($target.GOOS)/$($target.GOARCH)"
         Write-Host "  FAILED: $($target.GOOS)/$($target.GOARCH)" -ForegroundColor Red

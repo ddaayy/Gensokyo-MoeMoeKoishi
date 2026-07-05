@@ -3,9 +3,6 @@ name: Cross Compile Go Project
 on:
   pull_request:
     types: [opened, synchronize]
-  push:
-    branches:
-      - '*'
   workflow_dispatch:
 
 permissions:
