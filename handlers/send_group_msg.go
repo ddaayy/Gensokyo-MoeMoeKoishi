@@ -1097,7 +1097,7 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 		return messageToCreate
 	} else if recordURLs, ok := foundItems["url_record"]; ok && len(recordURLs) > 0 {
 		// 从URL下载语音
-		resp, err := http.Get("http://" + imageURLs[0])
+		resp, err := http.Get("http://" + recordURLs[0])
 		if err != nil {
 			mylog.Printf("Error downloading the record: %v", err)
 			return &dto.MessageToCreate{
@@ -1344,7 +1344,6 @@ resp, err := http.Get("https://" + recordURLs[0])
 			MsgType: 0, // 默认文本类型
 		}
 	}
-	return nil
 }
 
 // 上传富媒体信息
@@ -1853,7 +1852,6 @@ resp, err := http.Get("https://" + recordURLs[0])
 			MsgType: 0, // 默认文本类型
 		}
 	}
-	return nil
 }
 
 // 通过user_id获取类型
