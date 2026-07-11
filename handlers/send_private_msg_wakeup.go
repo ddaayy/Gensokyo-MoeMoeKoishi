@@ -266,6 +266,23 @@ func HandleSendPrivateMsgWakeupAsync(client callapi.Client, api openapi.OpenAPI,
 		}
 	}
 
+	// 如果所有场景都跳过了（如纯 [CQ:active] 无实际内容），至少发送唤醒请求
+	hasRealContent := false
+	for k := range foundItems {
+		if k != "active" && k != "active_type" && k != "active_sub_type" {
+			hasRealContent = true
+			break
+		}
+	}
+	if messageText == "" && !hasRealContent {
+		groupMessage := &dto.MessageToCreate{
+			Content:  " ",
+			IsWakeup: true,
+		}
+		resp, err := postC2CWakeupMessageWithRetry(apiv2, userID, groupMessage)
+		sendWakeupNotice(client, userID, resp, err, selfID)
+	}
+
 	return
 }
 
