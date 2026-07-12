@@ -1400,6 +1400,7 @@ resp, err := http.Get("https://" + recordURLs[0])
 			FileType:   4,           // 4代表文件
 			URL:        "http://" + fileURLs[0],
 			Content:    fileName,
+			FileName:   fileName,
 			SrvSendMsg: false,
 		}
 	} else if fileURLs, ok := foundItems["url_files"]; ok && len(fileURLs) > 0 {
@@ -1419,6 +1420,7 @@ resp, err := http.Get("https://" + recordURLs[0])
 			FileType:   4,           // 4代表文件
 			URL:        "https://" + fileURLs[0],
 			Content:    fileName,
+			FileName:   fileName,
 			SrvSendMsg: false,
 		}
 	} else if base64Files, ok := foundItems["base64_file"]; ok && len(base64Files) > 0 {
@@ -1995,6 +1997,7 @@ resp, err := http.Get("https://" + recordURLs[0])
 			FileType:   4,           // 4代表文件
 			URL:        "http://" + fileURLs[0],
 			Content:    fileName,
+			FileName:   fileName,
 			SrvSendMsg: false,
 		}
 	} else if fileURLs, ok := foundItems["url_files"]; ok && len(fileURLs) > 0 {
@@ -2014,6 +2017,7 @@ resp, err := http.Get("https://" + recordURLs[0])
 			FileType:   4,           // 4代表文件
 			URL:        "https://" + fileURLs[0],
 			Content:    fileName,
+			FileName:   fileName,
 			SrvSendMsg: false,
 		}
 	} else if base64Files, ok := foundItems["base64_file"]; ok && len(base64Files) > 0 {

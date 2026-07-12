@@ -36,6 +36,7 @@ func CreateAndUploadMediaMessage(ctx context.Context, base64EncodedData, eventID
 		FileData:   base64EncodedData,
 		SrvSendMsg: srvSendMsg,
 		Content:    content,
+		FileName:   content, // 文件类型时 content 即为文件名
 	}
 
 	// 调用uploadMedia函数上传媒体
@@ -69,6 +70,7 @@ func CreateAndUploadMediaMessagePrivate(ctx context.Context, base64EncodedData, 
 		FileData:   base64EncodedData,
 		SrvSendMsg: srvSendMsg,
 		Content:    content,
+		FileName:   content, // 文件类型时 content 即为文件名
 	}
 
 	// 调用uploadMediaPrivate函数上传媒体

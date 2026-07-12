@@ -24,6 +24,7 @@ type RichMediaMessage struct {
 	FileData   string `json:"file_data,omitempty"` //没有base64头的base64
 	SrvSendMsg bool   `json:"srv_send_msg,omitempty"`
 	Content    string `json:"content,omitempty"`
+	FileName   string `json:"file_name,omitempty"` // 文件名（仅文件类型有效）
 }
 
 // Meida message内的富媒体消息
