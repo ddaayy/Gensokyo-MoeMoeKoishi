@@ -496,22 +496,27 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				mylog.Printf("[CQ:markdown] 将消息类型切换为 markdown")
 			}
 
-			// 处理 [CQ:reply,id=数字] → message_reference
-			if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
-				if messageText != "" {
-					// 虚拟 reply ID → 真实 QQ API message_id
-					realReplyID, err := idmap.RetrieveRowByCachev2(replyIDs[0])
-					if err == nil && realReplyID != "" {
-						// echo 缓存中的 ID 格式为 "GroupID MessageID"，取后半段
-						parts := strings.Split(realReplyID, " ")
-						refID := parts[len(parts)-1]
-						groupMessage.MessageReference = &dto.MessageReference{
-							MessageID:             refID,
-							IgnoreGetMessageError: true,
-						}
-					}
-				}
-			}
+			// 处理 [CQ:reply,id=数字] → message_reference + msg_id
+			    if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
+			     if messageText != "" {
+			      // 虚拟 reply ID → 真实 QQ API message_id
+			      realReplyID, err := idmap.RetrieveRowByCachev2(replyIDs[0])
+			      if err == nil && realReplyID != "" {
+			       // echo 缓存中的 ID 格式为 "GroupID MessageID"，取后半段
+			       parts := strings.Split(realReplyID, " ")
+			       refID := parts[len(parts)-1]
+			       groupMessage.MessageReference = &dto.MessageReference{
+			        MessageID:             refID,
+			        IgnoreGetMessageError: true,
+			       }
+			       // 同时设置 msg_id，确保 v2 API 识别为回复
+			       groupMessage.MsgID = refID
+			       mylog.Printf("[CQ:reply] 设置回复消息: msg_id=%s", refID)
+			      } else {
+			       mylog.Printf("[CQ:reply] 虚拟 ID %s 反查失败: %v", replyIDs[0], err)
+			      }
+			     }
+			    }
 
 			var resp *dto.GroupMessageResponse
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
@@ -593,10 +598,9 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 				if !ok {
 					// 定义一个map来存储关键字
 					keyMap := map[string]bool{
-						"markdown":      true,
-						"embed":         true,
-						"qqmusic":       true,
-						"local_image":   true,
+					       "markdown":      true,
+					       "qqmusic":       true,
+					       "local_image":   true,
 						"local_record":  true,
 						"url_image":     true,
 						"url_images":    true,
@@ -1496,32 +1500,67 @@ if isPrivateOrLoopback("https://" + recordURLs[0]) {
 			SrvSendMsg: false,
 		}
 	} else if base64Files, ok := foundItems["base64_file"]; ok && len(base64Files) > 0 {
-		// base64文件数据上传到 QQ CDN
-		messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Files[0], eventid, 4, false, "", groupid, id, msgseq, apiv2)
-		if err != nil {
-			mylog.Printf("Error uploading base64 file: %v", err)
-			return &dto.MessageToCreate{
-				Content: "错误: 上传文件失败",
-				MsgID:   id,
-				EventID: eventid,
-				MsgSeq:  msgseq,
-				MsgType: 0,
-			}
-		}
-		return messageToCreate
-	} else {
-		// 返回文本信息
-		return &dto.MessageToCreate{
-			Content: messageText,
-			MsgID:   id,
-			EventID: eventid,
-			MsgSeq:  msgseq,
-			MsgType: 0, // 默认文本类型
-		}
-	}
-}
+	   // base64文件数据上传到 QQ CDN
+	   messageToCreate, err := images.CreateAndUploadMediaMessage(context.TODO(), base64Files[0], eventid, 4, false, "", groupid, id, msgseq, apiv2)
+	   if err != nil {
+	    mylog.Printf("Error uploading base64 file: %v", err)
+	    return &dto.MessageToCreate{
+	     Content: "错误: 上传文件失败",
+	     MsgID:   id,
+	     EventID: eventid,
+	     MsgSeq:  msgseq,
+	     MsgType: 0,
+	    }
+	   }
+	   return messageToCreate
+	  } else if unknownImages, ok := foundItems["unknown_image"]; ok && len(unknownImages) > 0 {
+	   // 无前缀图片，尝试作为 URL 处理
+	   mylog.Printf("unknown_image 作为 URL 图片尝试发送: %s", unknownImages[0])
+	   return &dto.RichMediaMessage{
+	    EventID:    id,
+	    FileType:   1,
+	    URL:        unknownImages[0],
+	    Content:    "",
+	    SrvSendMsg: false,
+	   }
+	  } else if unknownRecords, ok := foundItems["unknown_record"]; ok && len(unknownRecords) > 0 {
+	   // 无前缀语音，尝试作为 URL 处理
+	   mylog.Printf("unknown_record 作为 URL 语音尝试发送: %s", unknownRecords[0])
+	   return &dto.RichMediaMessage{
+	    EventID:    id,
+	    FileType:   3,
+	    URL:        unknownRecords[0],
+	    Content:    "",
+	    SrvSendMsg: false,
+	   }
+	  } else if unknownFiles, ok := foundItems["unknown_file"]; ok && len(unknownFiles) > 0 {
+	   // 无前缀文件，尝试作为 URL 处理
+	   fileName := ""
+	   if fns, ok := foundItems["file_name"]; ok && len(fns) > 0 && fns[0] != "" {
+	    fileName = fns[0]
+	   }
+	   mylog.Printf("unknown_file 作为 URL 文件尝试发送: %s", unknownFiles[0])
+	   return &dto.RichMediaMessage{
+	    EventID:    id,
+	    FileType:   4,
+	    URL:        unknownFiles[0],
+	    Content:    fileName,
+	    FileName:   fileName,
+	    SrvSendMsg: false,
+	   }
+	  } else {
+	   // 返回文本信息
+	   return &dto.MessageToCreate{
+	    Content: messageText,
+	    MsgID:   id,
+	    EventID: eventid,
+	    MsgSeq:  msgseq,
+	    MsgType: 0, // 默认文本类型
+	   }
+	  }
+	 }
 
-// 上传富媒体信息
+	 // 上传富媒体信息
 func generatePrivateMessage(id string, eventid string, foundItems map[string][]string, messageText string, msgseq int, apiv2 openapi.OpenAPI, userid string) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
@@ -2127,32 +2166,67 @@ if isPrivateOrLoopback("https://" + recordURLs[0]) {
 			SrvSendMsg: false,
 		}
 	} else if base64Files, ok := foundItems["base64_file"]; ok && len(base64Files) > 0 {
-		// base64文件数据上传到 QQ CDN
-		messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Files[0], eventid, 4, false, "", userid, id, msgseq, apiv2)
-		if err != nil {
-			mylog.Printf("Error uploading base64 file: %v", err)
-			return &dto.MessageToCreate{
-				Content: "错误: 上传文件失败",
-				MsgID:   id,
-				EventID: eventid,
-				MsgSeq:  msgseq,
-				MsgType: 0,
-			}
-		}
-		return messageToCreate
-	} else {
-		// 返回文本信息
-		return &dto.MessageToCreate{
-			Content: messageText,
-			MsgID:   id,
-			EventID: eventid,
-			MsgSeq:  msgseq,
-			MsgType: 0, // 默认文本类型
-		}
-	}
-}
+	   // base64文件数据上传到 QQ CDN
+	   messageToCreate, err := images.CreateAndUploadMediaMessagePrivate(context.TODO(), base64Files[0], eventid, 4, false, "", userid, id, msgseq, apiv2)
+	   if err != nil {
+	    mylog.Printf("Error uploading base64 file: %v", err)
+	    return &dto.MessageToCreate{
+	     Content: "错误: 上传文件失败",
+	     MsgID:   id,
+	     EventID: eventid,
+	     MsgSeq:  msgseq,
+	     MsgType: 0,
+	    }
+	   }
+	   return messageToCreate
+	  } else if unknownImages, ok := foundItems["unknown_image"]; ok && len(unknownImages) > 0 {
+	   // 无前缀图片，尝试作为 URL 处理
+	   mylog.Printf("unknown_image 作为 URL 图片尝试发送: %s", unknownImages[0])
+	   return &dto.RichMediaMessage{
+	    EventID:    id,
+	    FileType:   1,
+	    URL:        unknownImages[0],
+	    Content:    "",
+	    SrvSendMsg: false,
+	   }
+	  } else if unknownRecords, ok := foundItems["unknown_record"]; ok && len(unknownRecords) > 0 {
+	   // 无前缀语音，尝试作为 URL 处理
+	   mylog.Printf("unknown_record 作为 URL 语音尝试发送: %s", unknownRecords[0])
+	   return &dto.RichMediaMessage{
+	    EventID:    id,
+	    FileType:   3,
+	    URL:        unknownRecords[0],
+	    Content:    "",
+	    SrvSendMsg: false,
+	   }
+	  } else if unknownFiles, ok := foundItems["unknown_file"]; ok && len(unknownFiles) > 0 {
+	   // 无前缀文件，尝试作为 URL 处理
+	   fileName := ""
+	   if fns, ok := foundItems["file_name"]; ok && len(fns) > 0 && fns[0] != "" {
+	    fileName = fns[0]
+	   }
+	   mylog.Printf("unknown_file 作为 URL 文件尝试发送: %s", unknownFiles[0])
+	   return &dto.RichMediaMessage{
+	    EventID:    id,
+	    FileType:   4,
+	    URL:        unknownFiles[0],
+	    Content:    fileName,
+	    FileName:   fileName,
+	    SrvSendMsg: false,
+	   }
+	  } else {
+	   // 返回文本信息
+	   return &dto.MessageToCreate{
+	    Content: messageText,
+	    MsgID:   id,
+	    EventID: eventid,
+	    MsgSeq:  msgseq,
+	    MsgType: 0, // 默认文本类型
+	   }
+	  }
+	 }
 
-// 通过user_id获取类型
+	 // 通过user_id获取类型
 func GetMessageTypeByUserid(appID string, userID interface{}) string {
 	// 从appID和userID生成key
 	var userIDStr string

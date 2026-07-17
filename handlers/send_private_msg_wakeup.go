@@ -78,7 +78,6 @@ func HandleSendPrivateMsgWakeup(client callapi.Client, api openapi.OpenAPI, apiv
 		"url_file":      true,
 		"url_files":     true,
 		"base64_file":   true,
-		"embed":         true,
 	}
 
 	var singleItem = make(map[string][]string)

@@ -265,3 +265,87 @@ Markdown 内容中的 `![](本地路径)` 图片在自动上传到 QQ CDN 后，
 | `template/config_template.go` | 新增 image_hosting 配置段 |
 | `images/upload_api.go` | 按 oss_type 分发到 imagehosting 后端 |
 | `handlers/message_parser.go` | Markdown 图片重写支持本地路径 |
+
+---
+
+## 🚀 新增功能（续）
+
+### 群消息事件新增 `is_private` 字段
+
+`Processor/ProcessC2CMessage.go` 中群消息事件上报新增 `is_private` 布尔字段，标识该消息是否来自群内私聊（`group_private`）场景，方便应用端区分。
+
+---
+
+## 🔧 改进（续）
+
+### C2C 消息改为标准 OneBot V11 私聊格式上报
+
+`Processor/ProcessC2CMessage.go` 重构，C2C 消息（私聊）现在以 OneBot V11 标准的 `private_message` 事件格式上报，而非 `message` 格式。`self_id` 字段使用 `int64` 类型。
+
+### 配置自动补全遗漏 bool/int 类型和 parent=settings 边界情况
+
+`config/config.go` 中 `appendToConfigFile` 补充对 `bool` 和 `int` 类型配置项的补全支持，同时修复 `parent=settings` 边界情况的插入位置判断。
+
+---
+
+## 🐛 Bug 修复
+
+### markdown 消息中 [CQ:at] 未转为 QQ @ 标签
+
+**文件：** `handlers/send_group_msg.go`
+
+当 markdown 消息中同时包含 `[CQ:at]` 时，`[CQ:at]` 未被转换为 `<qqbot-at-user>` 标签，导致 `@` 在 markdown 渲染中丢失。已添加 `ResolveMarkdownAtMentions` 调用。
+
+### messageText 中的 [CQ:at] 未合并到 markdown 内容
+
+**文件：** `handlers/send_group_msg.go`
+
+数组段格式发送的 `[CQ:at]` 出现在 `messageText` 中，但合并到 markdown 内容前未先经 `ResolveMarkdownAtMentions` 转换，导致 `atTag` 始终为空。已修复转换顺序。
+
+### 回复消息未设置 msg_id 导致 v2 API 识别失败
+
+**文件：** `handlers/send_group_msg.go`、`handlers/send_private_msg.go`、`handlers/send_guild_channel_msg.go`
+
+`[CQ:reply]` 处理时仅设置了 `MessageReference` 未同时设置 `MsgID`，导致 QQ Bot v2 API 在某些场景下无法正确识别为回复消息。已为三个 Handler 的回复处理均补充 `MsgID` 设置。
+
+### 消息段格式（TRSS）缺少 reply 和 avatar 字段处理
+
+**文件：** `handlers/message_parser.go`
+
+TRSS 格式 `map[string]interface{}` 分支中缺少 `case "reply"` 和 `case "avatar"`，导致该格式下的回复引用和头像转图片功能不可用。已补充。
+
+### [CQ:video] 缺少 base64 和本地文件正则
+
+**文件：** `handlers/message_parser.go`
+
+string 格式（复古 CQ 码）中 `[CQ:video,file=base64://...]` 和 `[CQ:video,file=file://...]` 无对应正则匹配，视频被留在 messageText 中作为普通文本发送。已新增 `base64VideoPattern` 和 `localVideoPattern`。
+
+### foundItems 中 "embed" 名存实亡
+
+**文件：** `handlers/send_group_msg.go`、`handlers/send_private_msg.go`、`handlers/send_private_msg_wakeup.go`
+
+`keyMap` 中包含 `"embed"` key，但没有任何代码写入 `foundItems["embed"]`，且 generate 函数中无 embed 处理分支。若未来误写入会导致空消息发送。已从三个 keyMap 中移除。
+
+### unknown_image/unknown_record/unknown_file 静默丢弃
+
+**文件：** `handlers/message_parser.go`、`handlers/send_group_msg.go`
+
+无前缀的图片/语音/文件 CQ 码（如 `[CQ:image,file=filename.png]`）被收集到 `unknown_*` 后没有任何消费逻辑，静默丢弃。已在 `generateGroupMessage` 和 `generatePrivateMessage` 中添加 fallback 处理，作为 URL 媒体尝试发送。
+
+---
+
+## 📦 文件变更清单（补充）
+
+| 文件 | 变更 |
+|------|------|
+| `Processor/ProcessC2CMessage.go` | C2C 消息改为标准私聊格式上报；新增 `is_private` 字段 |
+| `Processor/Processor.go` | 新增 `is_private` 字段传递 |
+| `config/config.go` | 配置自动补全支持 bool/int 类型；parent=settings 边界修复 |
+| `handlers/message_parser.go` | 新增 `base64VideoPattern`/`localVideoPattern` 正则；TRSS 格式补充 reply/avatar 分支 |
+| `handlers/send_group_msg.go` | 回复消息补充 msg_id；keyMap 移除 embed；新增 unknown 类型 fallback |
+| `handlers/send_private_msg.go` | 回复消息补充 msg_id；keyMap 移除 embed；新增 unknown 类型 fallback |
+| `handlers/send_private_msg_wakeup.go` | keyMap 移除 embed |
+| `handlers/send_guild_channel_msg.go` | 回复消息补充 msg_id |
+| `docs/文档-新增功能.md` | 更新 C2C 私聊格式说明 |
+| `docs/扩展cq码/cq-at.md` | 更新 markdown 中 @ 标签说明 |
+| `release_log/CHANGELOG_v008.md` | 本文档更新 |

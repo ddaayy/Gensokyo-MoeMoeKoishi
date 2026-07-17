@@ -239,20 +239,25 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 			}
 			groupMessage.Timestamp = time.Now().Unix() // 设置时间戳
 
-			// 处理 [CQ:reply,id=数字] → message_reference
-			if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
-				if messageText != "" {
-					realReplyID, err := idmap.RetrieveRowByCachev2(replyIDs[0])
-					if err == nil && realReplyID != "" {
-						parts := strings.Split(realReplyID, " ")
-						refID := parts[len(parts)-1]
-						groupMessage.MessageReference = &dto.MessageReference{
-							MessageID:             refID,
-							IgnoreGetMessageError: true,
-						}
-					}
-				}
-			}
+			// 处理 [CQ:reply,id=数字] → message_reference + msg_id
+			    if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
+			     if messageText != "" {
+			      realReplyID, err := idmap.RetrieveRowByCachev2(replyIDs[0])
+			      if err == nil && realReplyID != "" {
+			       parts := strings.Split(realReplyID, " ")
+			       refID := parts[len(parts)-1]
+			       groupMessage.MessageReference = &dto.MessageReference{
+			        MessageID:             refID,
+			        IgnoreGetMessageError: true,
+			       }
+			       // 同时设置 msg_id，确保 v2 API 识别为回复
+			       groupMessage.MsgID = refID
+			       mylog.Printf("[CQ:reply] 设置私聊回复消息: msg_id=%s", refID)
+			      } else {
+			       mylog.Printf("[CQ:reply] 虚拟 ID %s 反查失败: %v", replyIDs[0], err)
+			      }
+			     }
+			    }
 
 			// 发送组合消息
 			resp, err = apiv2.PostC2CMessage(context.TODO(), UserID, groupMessage)
@@ -336,7 +341,6 @@ func HandleSendPrivateMsg(client callapi.Client, api openapi.OpenAPI, apiv2 open
 					// 定义一个map来存储关键字
 					keyMap := map[string]bool{
 					     "markdown":      true,
-					     "embed":         true,
 					     "qqmusic":       true,
 					     "local_image":   true,
 					     "local_record":  true,

@@ -291,20 +291,25 @@ func HandleSendGuildChannelMsg(client callapi.Client, api openapi.OpenAPI, apiv2
 		     mylog.Printf("[CQ:markdown] 将频道消息类型切换为 markdown")
 		    }
 
-		    // 处理 [CQ:reply,id=数字] → message_reference
-		    if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
-		     if messageText != "" {
-		      realReplyID, err := idmap.RetrieveRowByCachev2(replyIDs[0])
-		      if err == nil && realReplyID != "" {
-		       parts := strings.Split(realReplyID, " ")
-		       refID := parts[len(parts)-1]
-		       textMsg.MessageReference = &dto.MessageReference{
-		        MessageID:             refID,
-		        IgnoreGetMessageError: true,
-		       }
-		      }
-		     }
-		    }
+		    // 处理 [CQ:reply,id=数字] → message_reference + msg_id
+		           if replyIDs, ok := foundItems["reply_msg_id"]; ok && len(replyIDs) > 0 {
+		            if messageText != "" {
+		             realReplyID, err := idmap.RetrieveRowByCachev2(replyIDs[0])
+		             if err == nil && realReplyID != "" {
+		              parts := strings.Split(realReplyID, " ")
+		              refID := parts[len(parts)-1]
+		              textMsg.MessageReference = &dto.MessageReference{
+		               MessageID:             refID,
+		               IgnoreGetMessageError: true,
+		              }
+		              // 同时设置 msg_id，确保 v2 API 识别为回复
+		              textMsg.MsgID = refID
+		              mylog.Printf("[CQ:reply] 设置频道回复消息: msg_id=%s", refID)
+		             } else {
+		              mylog.Printf("[CQ:reply] 虚拟 ID %s 反查失败: %v", replyIDs[0], err)
+		             }
+		            }
+		           }
 
 		    if resp, err = api.PostMessage(context.TODO(), channelID.(string), textMsg); err != nil {
 		     mylog.Printf("发送文本信息失败: %v", err)

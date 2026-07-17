@@ -52,26 +52,30 @@ var (
 	httpUrlRecordPattern = regexp.MustCompile(`\[CQ:record,file=http://(.+?)\]`)
 	httpsUrlRecordPattern = regexp.MustCompile(`\[CQ:record,file=https://(.+?)\]`)
 	httpUrlVideoPattern  = regexp.MustCompile(`\[CQ:video,file=http://(.+?)\]`)
-	httpsUrlVideoPattern = regexp.MustCompile(`\[CQ:video,file=https://(.+?)\]`)
-	mdPattern            = regexp.MustCompile(`\[CQ:markdown,data=base64://(.+?)\]`)
+	  httpsUrlVideoPattern = regexp.MustCompile(`\[CQ:video,file=https://(.+?)\]`)
+	  base64VideoPattern   = regexp.MustCompile(`\[CQ:video,file=base64://(.+?)\]`)
+	  mdPattern            = regexp.MustCompile(`\[CQ:markdown,data=base64://(.+?)\]`)
 	mdJSONPattern        = regexp.MustCompile(`\[CQ:markdown,data=(\{.*\})\]`)
 	qqMusicPattern       = regexp.MustCompile(`\[CQ:music,type=qq,id=(\d+)\]`)
 	replyRe              = regexp.MustCompile(`\[CQ:reply,id=(\d+)\]`)
 	localImagePattern    *regexp.Regexp
 	localRecordPattern    *regexp.Regexp
+	localVideoPattern    *regexp.Regexp
 	compilePatternsOnce  sync.Once
 )
 
 // initPlatformPatterns 初始化平台相关的正则表达式（Windows vs Unix 路径前缀差异）
 func initPlatformPatterns() {
-	if runtime.GOOS == "windows" {
-		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
-		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///([^\]]+?)\]`)
-	} else {
-		localImagePattern = regexp.MustCompile(`\[CQ:image,file=file://([^\]]+?)\]`)
-		localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
-	}
-}
+  if runtime.GOOS == "windows" {
+   localImagePattern = regexp.MustCompile(`\[CQ:image,file=file:///([^\]]+?)\]`)
+   localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file:///([^\]]+?)\]`)
+   localVideoPattern = regexp.MustCompile(`\[CQ:video,file=file:///([^\]]+?)\]`)
+  } else {
+   localImagePattern = regexp.MustCompile(`\[CQ:image,file=file://([^\]]+?)\]`)
+   localRecordPattern = regexp.MustCompile(`\[CQ:record,file=file://([^\]]+?)\]`)
+   localVideoPattern = regexp.MustCompile(`\[CQ:video,file=file://([^\]]+?)\]`)
+  }
+ }
 
 // ---------- 安全工具函数 ----------
 
@@ -1009,10 +1013,16 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			}
 
 		case "at":
-			qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
-			messageText += "[CQ:at,qq=" + qqNumber + "]"
+		    qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
+		    messageText += "[CQ:at,qq=" + qqNumber + "]"
 
-		case "avatar":
+		   case "reply":
+		    replyID, _ := message["data"].(map[string]interface{})["id"].(string)
+		    if replyID != "" {
+		     foundItems["reply_msg_id"] = append(foundItems["reply_msg_id"], replyID)
+		    }
+
+		   case "avatar":
 		    qqNumber, _ := message["data"].(map[string]interface{})["qq"].(string)
 		    var avatarCQCode string
 		    if paramsMessage.GroupID == nil {
@@ -1182,7 +1192,9 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 			{"markdown", mdPattern},
 			{"qqmusic", qqMusicPattern},
 			{"url_video", httpUrlVideoPattern},
-			{"url_videos", httpsUrlVideoPattern},
+			    {"url_videos", httpsUrlVideoPattern},
+			    {"base64_video", base64VideoPattern},
+			    {"local_video", localVideoPattern},
 		}
 
 		for _, pattern := range patterns {
