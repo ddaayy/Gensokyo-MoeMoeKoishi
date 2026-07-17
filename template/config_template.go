@@ -81,7 +81,10 @@ settings:
   auto_bind : true                  #测试功能,后期会移除
 
   #发图相关
-  oss_type : 0                      #请完善后方具体配置 完成#腾讯云配置...,0代表配置server dir port服务器自行上传(省钱),1,腾讯cos存储桶 2,百度oss存储桶 3,阿里oss存储桶
+  # oss_type 仅控制图片上传路径；语音上传不受此选项影响（仍走本机或 1~3 云OSS）
+  # 0=本机上传 1=腾讯云COS(旧t_COS_*) 2=百度云BOS 3=阿里云OSS 4=腾讯云COS自签(image_hosting.cos)
+  # 5=Bilibili 6=QQ频道 7=ChatGLM 8=Ukaka 9=星野 10=Nature
+  oss_type : 0                      #请完善后方具体配置; 同时只能选择一个,避免多个图床同时启用导致错误
   image_sizelimit : 0               #代表kb 腾讯api要求图片1500ms完成传输 如果图片发不出 请提升上行或设置此值 默认为0 不压缩
   image_limit : 100                 #每分钟上传的最大图片数量,可自行增加
   guild_url_image_to_base64 : false #解决频道发不了某些url图片,报错40003问题
@@ -272,32 +275,25 @@ settings:
   a_OSS_AccessKeySecret : ""
   a_audit : false                   #是否审核图片 请先开通阿里云内容安全需企业认证。具体操作 请参见https://help.aliyun.com/document_detail/69806.html
 
-  #统一图床服务（按配置顺序依次尝试，第一个成功的返回URL）
-  image_hosting:
-    cos:                            #腾讯云COS（需配置secret_id/secret_key）
-      enabled: false
-      secret_id: ""                 #腾讯云 API SecretId
-      secret_key: ""                #腾讯云 API SecretKey
-      region: "ap-guangzhou"        #存储桶地域
-      bucket: ""                    #存储桶名称
-      domain: ""                    #自定义域名（留空使用COS默认域名）
-    bilibili:                       #B站图床（需配置Cookie）
-      enabled: false
-      csrf_token: ""                #B站bili_jct
-      sessdata: ""                  #B站SESSDATA
-      bucket: "openplatform"
-    qq_channel:                     #QQ频道图床（需channel_id+token）
-      enabled: false
-      channel_id: ""
-      token: ""                     #Authorization值，如"QQBot xxx.yyy"
-    chatglm:                        #智谱免费图床（开箱即用）
-      enabled: true
-    ukaka:                          #Ukaka免费图床（开箱即用）
-      enabled: true
-    xingye:                         #星野免费图床（开箱即用）
-      enabled: true
-    nature:                         #Nature腾讯COS直传（密钥内置，开箱即用）
-      enabled: true
+  #统一图床凭证（仅用于填写 oss_type 对应图床/OSS 的凭证，不可同时启用多个）
+  # oss_type=4/5/6 时需要填写下方对应配置；oss_type=7/8/9/10 无需配置
+  cos:                            #腾讯云COS自签（oss_type=4，需配置secret_id/secret_key）
+    secret_id: ""                 #腾讯云 API SecretId
+    secret_key: ""                #腾讯云 API SecretKey
+    region: "ap-guangzhou"        #存储桶地域
+    bucket: ""                    #存储桶名称
+    domain: ""                    #自定义域名（留空使用COS默认域名）
+  bilibili:                       #B站图床（oss_type=5，需配置Cookie）
+    csrf_token: ""                #B站bili_jct
+    sessdata: ""                  #B站SESSDATA
+    bucket: "openplatform"
+  qq_channel:                     #QQ频道图床（oss_type=6，需channel_id+token）
+    channel_id: ""
+    token: ""                     #Authorization值，如"QQBot xxx.yyy"
+  chatglm:                        #智谱免费图床（oss_type=7，开箱即用）
+  ukaka:                          #Ukaka免费图床（oss_type=8，开箱即用）
+  xingye:                         #星野免费图床（oss_type=9，开箱即用）
+  nature:                         #Nature腾讯COS直传（oss_type=10，密钥内置，开箱即用）
 
 `
 const Logo = `

@@ -1,20 +1,19 @@
 // Package imagehosting 提供统一的图床上传接口。
 //
-// 支持 7 种图床后端，按配置顺序依次尝试，第一个成功的返回结果：
-//  1. COS (腾讯云对象存储)
-//  2. Bilibili (B站图床)
-//  3. QQ频道 (通过发消息获取 qpic.cn 链接)
-//  4. ChatGLM (智谱免费图床)
-//  5. Ukaka (免费签名上传)
-//  6. 星野 (免费签名上传)
-//  7. Nature (腾讯COS直传, 密钥内置)
+// 本包是 oss_type 的后端实现之一，**不再由用户同时启用多个图床**。
+// 具体使用哪个后端由配置项 oss_type 决定：
+//   4 = COS（腾讯云对象存储，自签）
+//   5 = Bilibili
+//   6 = QQ频道
+//   7 = ChatGLM
+//   8 = Ukaka
+//   9 = 星野
+//  10 = Nature
 //
 // 使用方式:
 //
-//	url, err := imagehosting.Upload(base64Data, "image.png")
-//	if err != nil {
-//	    // fallback
-//	}
+//	url, err := imagehosting.UploadProvider("chatglm", imageBytes, "image.png")
+//
 package imagehosting
 
 import (
@@ -33,99 +32,49 @@ import (
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
 
-// ---------- 统一上传接口 ----------
+// UploadProvider 按指定 provider 上传图片。
+// provider 名称与 config.GetOssTypeName(config.OssTypeXXX) 保持一致。
+func UploadProvider(provider string, imageData []byte, filename string) (string, error) {
+	mylog.Printf("图床上传 provider=%s", provider)
+	switch provider {
+	case "cos":
+		return tryCOS(imageData, filename)
+	case "bilibili":
+		return tryBilibili(imageData, filename)
+	case "qq_channel":
+		return tryQQChannel(imageData, filename)
+	case "chatglm":
+		return tryChatGLM(imageData, filename)
+	case "ukaka":
+		return tryUkaka(imageData, filename)
+	case "xingye":
+		return tryXingye(imageData, filename)
+	case "nature":
+		return tryNature(imageData, filename)
+	default:
+		return "", fmt.Errorf("未知或不支持的图床 provider: %s", provider)
+	}
+}
 
-// Upload 解码 base64 图片后按配置优先级依次尝试各图床。
-// 返回公开可访问的图片 URL。
-func Upload(base64Data string, filename string) (string, error) {
-	imageBytes, err := base64.StdEncoding.DecodeString(base64Data)
+// UploadBase64Provider 解码 base64 后按指定 provider 上传。
+func UploadBase64Provider(provider string, base64Data string, filename string) (string, error) {
+	imageData, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
 		return "", fmt.Errorf("base64 解码失败: %w", err)
 	}
-
-	// 按优先级依次尝试
-	uploaders := []struct {
-		name string
-		fn   func([]byte, string) (string, error)
-	}{
-		{"COS", tryCOS},
-		{"Bilibili", tryBilibili},
-		{"QQChannel", tryQQChannel},
-		{"ChatGLM", tryChatGLM},
-		{"Ukaka", tryUkaka},
-		{"Xingye", tryXingye},
-		{"Nature", tryNature},
-	}
-
-	for _, u := range uploaders {
-		if !isEnabled(u.name) {
-			continue
-		}
-		url, err := u.fn(imageBytes, filename)
-		if err == nil && url != "" {
-			mylog.Printf("图床 [%s] 上传成功", u.name)
-			return url, nil
-		}
-		if err != nil {
-			mylog.Printf("图床 [%s] 上传失败: %v", u.name, err)
-		}
-	}
-
-	return "", fmt.Errorf("所有图床均上传失败")
+	return UploadProvider(provider, imageData, filename)
 }
 
-// UploadBytes 直接上传 bytes（无需 base64 编解码）
+// Upload 兼容旧接口，按当前 oss_type 名称上传。
+// 注意：oss_type 为 0~3 时不会走到本包，请优先使用 UploadProvider。
+func Upload(base64Data string, filename string) (string, error) {
+	return UploadBase64Provider(config.GetOssTypeName(config.GetOssType()), base64Data, filename)
+}
+
+// UploadBytes 兼容旧接口，按当前 oss_type 名称上传。
+// 注意：oss_type 为 0~3 时不会走到本包，请优先使用 UploadProvider。
 func UploadBytes(imageData []byte, filename string) (string, error) {
-	uploaders := []struct {
-		name string
-		fn   func([]byte, string) (string, error)
-	}{
-		{"COS", tryCOS},
-		{"Bilibili", tryBilibili},
-		{"QQChannel", tryQQChannel},
-		{"ChatGLM", tryChatGLM},
-		{"Ukaka", tryUkaka},
-		{"Xingye", tryXingye},
-		{"Nature", tryNature},
-	}
-
-	for _, u := range uploaders {
-		if !isEnabled(u.name) {
-			continue
-		}
-		url, err := u.fn(imageData, filename)
-		if err == nil && url != "" {
-			mylog.Printf("图床 [%s] 上传成功", u.name)
-			return url, nil
-		}
-		if err != nil {
-			mylog.Printf("图床 [%s] 上传失败: %v", u.name, err)
-		}
-	}
-
-	return "", fmt.Errorf("所有图床均上传失败")
-}
-
-// ---------- 配置检查 ----------
-
-func isEnabled(name string) bool {
-	switch name {
-	case "COS":
-		return config.GetImageHostingCOS().Enabled
-	case "Bilibili":
-		return config.GetImageHostingBilibili().Enabled
-	case "QQChannel":
-		return config.GetImageHostingQQChannel().Enabled
-	case "ChatGLM":
-		return config.GetImageHostingChatGLM().Enabled
-	case "Ukaka":
-		return config.GetImageHostingUkaka().Enabled
-	case "Xingye":
-		return config.GetImageHostingXingye().Enabled
-	case "Nature":
-		return config.GetImageHostingNature().Enabled
-	}
-	return false
+	return UploadProvider(config.GetOssTypeName(config.GetOssType()), imageData, filename)
 }
 
 // ---------- 辅助函数 ----------
@@ -214,8 +163,6 @@ func readClose(resp *http.Response) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-// ---------- 文件名处理 ----------
-
 // ensureExt 确保文件名有正确的扩展名
 func ensureExt(filename string, data []byte) string {
 	ext := detectExt(data)
@@ -228,7 +175,3 @@ func ensureExt(filename string, data []byte) string {
 	}
 	return filename + "." + ext
 }
-
-// ---------- 图床实现占位 ----------
-
-// 各 tryXxx 函数在对应 .go 文件中实现

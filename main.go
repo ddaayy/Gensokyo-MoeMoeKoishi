@@ -453,7 +453,7 @@ func main() {
 	}
 	// 使用 gRPC（Lotus 模式）或 HTTP 处理 IDMap
 	if !initLotusGrpc(conf.Settings.Lotus, conf.Settings.LotusGrpc, conf.Settings.LotusGrpcPort) {
-		r.GET("/getid", server.GetIDHandler)
+		r.GET("/getid", server.IDMapAuthMiddleware(), server.GetIDHandler)
 	}
 
 	webhookHandler := server.NewWebhookHandler(5000)

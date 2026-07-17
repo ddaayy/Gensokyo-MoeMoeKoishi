@@ -17,8 +17,8 @@ import (
 
 func tryQQChannel(data []byte, filename string) (string, error) {
 	cfg := config.GetImageHostingQQChannel()
-	if !cfg.Enabled || cfg.ChannelID == "" {
-		return "", fmt.Errorf("QQ频道 未配置或未启用")
+	if cfg.ChannelID == "" {
+		return "", fmt.Errorf("QQ频道 未配置（请填写 channel_id）")
 	}
 
 	_ = detectMIME(data)

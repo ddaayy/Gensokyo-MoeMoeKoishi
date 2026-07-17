@@ -2029,6 +2029,51 @@ func GetOssType() int {
 	return instance.Settings.OssType
 }
 
+// oss_type 枚举值（仅控制图片上传路径）
+const (
+	OssTypeLocal     = 0
+	OssTypeTencent   = 1
+	OssTypeBaidu     = 2
+	OssTypeAliyun    = 3
+	OssTypeCOS       = 4
+	OssTypeBilibili  = 5
+	OssTypeQQChannel = 6
+	OssTypeChatGLM   = 7
+	OssTypeUkaka     = 8
+	OssTypeXingye    = 9
+	OssTypeNature    = 10
+)
+
+// GetOssTypeName 返回 oss_type 的可读名称
+func GetOssTypeName(t int) string {
+	switch t {
+	case OssTypeLocal:
+		return "local"
+	case OssTypeTencent:
+		return "tencent_cos"
+	case OssTypeBaidu:
+		return "baidu_bos"
+	case OssTypeAliyun:
+		return "aliyun_oss"
+	case OssTypeCOS:
+		return "cos"
+	case OssTypeBilibili:
+		return "bilibili"
+	case OssTypeQQChannel:
+		return "qq_channel"
+	case OssTypeChatGLM:
+		return "chatglm"
+	case OssTypeUkaka:
+		return "ukaka"
+	case OssTypeXingye:
+		return "xingye"
+	case OssTypeNature:
+		return "nature"
+	default:
+		return "unknown"
+	}
+}
+
 // 获取BaiduBOSBucketName
 func GetBaiduBOSBucketName() string {
 	mu.RLock()
@@ -2547,7 +2592,7 @@ func GetImageHostingCOS() structs.ImageHostingCOS {
 	if instance == nil {
 		return structs.ImageHostingCOS{}
 	}
-	return instance.Settings.ImageHosting.COS
+	return instance.Settings.COS
 }
 
 // GetImageHostingBilibili 获取 Bilibili 图床配置
@@ -2557,7 +2602,7 @@ func GetImageHostingBilibili() structs.ImageHostingBilibili {
 	if instance == nil {
 		return structs.ImageHostingBilibili{}
 	}
-	return instance.Settings.ImageHosting.Bilibili
+	return instance.Settings.Bilibili
 }
 
 // GetImageHostingQQChannel 获取 QQ频道 图床配置
@@ -2567,7 +2612,7 @@ func GetImageHostingQQChannel() structs.ImageHostingQQChannel {
 	if instance == nil {
 		return structs.ImageHostingQQChannel{}
 	}
-	return instance.Settings.ImageHosting.QQChannel
+	return instance.Settings.QQChannel
 }
 
 // GetImageHostingQQChannelToken 获取 QQ频道 图床的 Authorization token
@@ -2577,7 +2622,7 @@ func GetImageHostingQQChannelToken() string {
 	if instance == nil {
 		return ""
 	}
-	return instance.Settings.ImageHosting.QQChannel.Token
+	return instance.Settings.QQChannel.Token
 }
 
 // GetImageHostingChatGLM 获取 ChatGLM 图床配置
@@ -2587,7 +2632,7 @@ func GetImageHostingChatGLM() structs.ImageHostingSimple {
 	if instance == nil {
 		return structs.ImageHostingSimple{}
 	}
-	return instance.Settings.ImageHosting.ChatGLM
+	return instance.Settings.ChatGLM
 }
 
 // GetImageHostingUkaka 获取 Ukaka 图床配置
@@ -2597,7 +2642,7 @@ func GetImageHostingUkaka() structs.ImageHostingSimple {
 	if instance == nil {
 		return structs.ImageHostingSimple{}
 	}
-	return instance.Settings.ImageHosting.Ukaka
+	return instance.Settings.Ukaka
 }
 
 // GetImageHostingXingye 获取 星野 图床配置
@@ -2607,7 +2652,7 @@ func GetImageHostingXingye() structs.ImageHostingSimple {
 	if instance == nil {
 		return structs.ImageHostingSimple{}
 	}
-	return instance.Settings.ImageHosting.Xingye
+	return instance.Settings.Xingye
 }
 
 // GetImageHostingNature 获取 Nature 图床配置
@@ -2617,7 +2662,7 @@ func GetImageHostingNature() structs.ImageHostingSimple {
 	if instance == nil {
 		return structs.ImageHostingSimple{}
 	}
-	return instance.Settings.ImageHosting.Nature
+	return instance.Settings.Nature
 }
 
 // 获取ServerTempQQguild

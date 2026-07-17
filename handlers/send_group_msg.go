@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -855,10 +857,41 @@ func HandleSendGroupMsg(client callapi.Client, api openapi.OpenAPI, apiv2 openap
 }
 
 // 上传富媒体信息
+// isPrivateOrLoopback 检查URL是否指向私有或回环地址（SSRF防护）
+func isPrivateOrLoopback(rawURL string) bool {
+	parsed, err := neturl.Parse(rawURL)
+	if err != nil {
+		return true // 解析失败则拒绝
+	}
+	host := parsed.Hostname()
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast()
+	}
+	// 域名解析后检查
+	ips, err := net.LookupHost(host)
+	if err != nil {
+		return true // 无法解析则拒绝
+	}
+	for _, ipStr := range ips {
+		ip = net.ParseIP(ipStr)
+		if ip != nil && (ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast()) {
+			return true
+		}
+	}
+	return false
+}
+
 func generateGroupMessage(id string, eventid string, foundItems map[string][]string, messageText string, msgseq int, apiv2 openapi.OpenAPI, groupid string) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
-		imageData, err := os.ReadFile(imageURLs[0])
+		// 安全校验：防止路径穿越
+		safePath, err := safeLocalPath(imageURLs[0])
+		if err != nil {
+			mylog.Printf("安全校验失败，跳过本地图片: %v", err)
+			return nil
+		}
+		imageData, err := os.ReadFile(safePath)
 		if err != nil {
 			// 读入文件失败
 			mylog.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
@@ -902,7 +935,13 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 		return messageToCreate
 	} else if RecordURLs, ok := foundItems["local_record"]; ok && len(RecordURLs) > 0 {
 		// 从本地路径读取语音
-		RecordData, err := os.ReadFile(RecordURLs[0])
+		// 安全校验：防止路径穿越
+		safePath, err := safeLocalPath(RecordURLs[0])
+		if err != nil {
+			mylog.Printf("安全校验失败，跳过本地语音: %v", err)
+			return nil
+		}
+		RecordData, err := os.ReadFile(safePath)
 		if err != nil {
 			// 读入文件失败
 			mylog.Printf("Error reading the record from path %s: %v", RecordURLs[0], err)
@@ -955,7 +994,11 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 		var newpiclink string
 		if config.GetUrlPicTransfer() {
 			// 从URL下载图片
-			resp, err := http.Get("http://" + imageURLs[0])
+			if isPrivateOrLoopback("http://" + imageURLs[0]) {
+			mylog.Printf("SSRF 阻止: 目标地址为私有地址: http://%s", imageURLs[0])
+			return nil
+		}
+		resp, err := http.Get("http://" + imageURLs[0])
 			if err != nil {
 				mylog.Printf("Error downloading the image: %v", err)
 				return &dto.MessageToCreate{
@@ -1013,7 +1056,11 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 		var newpiclink string
 		if config.GetUrlPicTransfer() {
 			// 从URL下载图片
-			resp, err := http.Get("https://" + imageURLs[0])
+			if isPrivateOrLoopback("https://" + imageURLs[0]) {
+			mylog.Printf("SSRF 阻止: 目标地址为私有地址: https://%s", imageURLs[0])
+			return nil
+		}
+		resp, err := http.Get("https://" + imageURLs[0])
 			if err != nil {
 				mylog.Printf("Error downloading the image: %v", err)
 				return &dto.MessageToCreate{
@@ -1111,6 +1158,10 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 		return messageToCreate
 	} else if recordURLs, ok := foundItems["url_record"]; ok && len(recordURLs) > 0 {
 		// 从URL下载语音
+		if isPrivateOrLoopback("http://" + recordURLs[0]) {
+		mylog.Printf("SSRF 阻止: 目标地址为私有地址: http://%s", recordURLs[0])
+			return nil
+		}
 		resp, err := http.Get("http://" + recordURLs[0])
 		if err != nil {
 			mylog.Printf("Error downloading the record: %v", err)
@@ -1171,7 +1222,11 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 		}
 	} else if recordURLs, ok := foundItems["url_records"]; ok && len(recordURLs) > 0 {
 // 从URL下载语音
-resp, err := http.Get("https://" + recordURLs[0])
+if isPrivateOrLoopback("https://" + recordURLs[0]) {
+		mylog.Printf("SSRF 阻止: 目标地址为私有地址: https://%s", recordURLs[0])
+			return nil
+		}
+		resp, err := http.Get("https://" + recordURLs[0])
 		if err != nil {
 			mylog.Printf("Error downloading the record: %v", err)
 			return &dto.MessageToCreate{
@@ -1350,7 +1405,13 @@ resp, err := http.Get("https://" + recordURLs[0])
 		}
 	} else if fileURLs, ok := foundItems["local_file"]; ok && len(fileURLs) > 0 {
 		// 从本地路径读取文件
-		fileData, err := os.ReadFile(fileURLs[0])
+		// 安全校验：防止路径穿越
+		safePath, err := safeLocalPath(fileURLs[0])
+		if err != nil {
+			mylog.Printf("安全校验失败，跳过本地文件: %v", err)
+			return nil
+		}
+		fileData, err := os.ReadFile(safePath)
 		if err != nil {
 			mylog.Printf("Error reading the file from path %s: %v", fileURLs[0], err)
 			return &dto.MessageToCreate{
@@ -1453,7 +1514,13 @@ resp, err := http.Get("https://" + recordURLs[0])
 func generatePrivateMessage(id string, eventid string, foundItems map[string][]string, messageText string, msgseq int, apiv2 openapi.OpenAPI, userid string) interface{} {
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
-		imageData, err := os.ReadFile(imageURLs[0])
+		// 安全校验：防止路径穿越
+		safePath, err := safeLocalPath(imageURLs[0])
+		if err != nil {
+			mylog.Printf("安全校验失败，跳过本地图片: %v", err)
+			return nil
+		}
+		imageData, err := os.ReadFile(safePath)
 		if err != nil {
 			// 读入文件失败
 			mylog.Printf("Error reading the image from path %s: %v", imageURLs[0], err)
@@ -1497,7 +1564,13 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 		return messageToCreate
 	} else if RecordURLs, ok := foundItems["local_record"]; ok && len(RecordURLs) > 0 {
 		// 从本地路径读取语音
-		RecordData, err := os.ReadFile(RecordURLs[0])
+		// 安全校验：防止路径穿越
+		safePath, err := safeLocalPath(RecordURLs[0])
+		if err != nil {
+			mylog.Printf("安全校验失败，跳过本地语音: %v", err)
+			return nil
+		}
+		RecordData, err := os.ReadFile(safePath)
 		if err != nil {
 			// 读入文件失败
 			mylog.Printf("Error reading the record from path %s: %v", RecordURLs[0], err)
@@ -1550,7 +1623,11 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 		var newpiclink string
 		if config.GetUrlPicTransfer() {
 			// 从URL下载图片
-			resp, err := http.Get("http://" + imageURLs[0])
+			if isPrivateOrLoopback("http://" + imageURLs[0]) {
+			mylog.Printf("SSRF 阻止: 目标地址为私有地址: http://%s", imageURLs[0])
+			return nil
+		}
+		resp, err := http.Get("http://" + imageURLs[0])
 			if err != nil {
 				mylog.Printf("Error downloading the image: %v", err)
 				return &dto.MessageToCreate{
@@ -1608,7 +1685,11 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 		var newpiclink string
 		if config.GetUrlPicTransfer() {
 			// 从URL下载图片
-			resp, err := http.Get("https://" + imageURLs[0])
+			if isPrivateOrLoopback("https://" + imageURLs[0]) {
+			mylog.Printf("SSRF 阻止: 目标地址为私有地址: https://%s", imageURLs[0])
+			return nil
+		}
+		resp, err := http.Get("https://" + imageURLs[0])
 			if err != nil {
 				mylog.Printf("Error downloading the image: %v", err)
 				return &dto.MessageToCreate{
@@ -1706,6 +1787,10 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 			return messageToCreate
 	} else if recordURLs, ok := foundItems["url_record"]; ok && len(recordURLs) > 0 {
 		// 从URL下载语音
+		if isPrivateOrLoopback("http://" + recordURLs[0]) {
+		mylog.Printf("SSRF 阻止: 目标地址为私有地址: http://%s", recordURLs[0])
+			return nil
+		}
 		resp, err := http.Get("http://" + recordURLs[0])
 		if err != nil {
 			mylog.Printf("Error downloading the record: %v", err)
@@ -1766,7 +1851,11 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 		}
 	} else if recordURLs, ok := foundItems["url_records"]; ok && len(recordURLs) > 0 {
 // 从URL下载语音
-resp, err := http.Get("https://" + recordURLs[0])
+if isPrivateOrLoopback("https://" + recordURLs[0]) {
+		mylog.Printf("SSRF 阻止: 目标地址为私有地址: https://%s", recordURLs[0])
+			return nil
+		}
+		resp, err := http.Get("https://" + recordURLs[0])
 		if err != nil {
 			mylog.Printf("Error downloading the record: %v", err)
 			return &dto.MessageToCreate{
@@ -1947,7 +2036,13 @@ resp, err := http.Get("https://" + recordURLs[0])
 		}
 	} else if fileURLs, ok := foundItems["local_file"]; ok && len(fileURLs) > 0 {
 		// 从本地路径读取文件
-		fileData, err := os.ReadFile(fileURLs[0])
+		// 安全校验：防止路径穿越
+		safePath, err := safeLocalPath(fileURLs[0])
+		if err != nil {
+			mylog.Printf("安全校验失败，跳过本地文件: %v", err)
+			return nil
+		}
+		fileData, err := os.ReadFile(safePath)
 		if err != nil {
 			mylog.Printf("Error reading the file from path %s: %v", fileURLs[0], err)
 			return &dto.MessageToCreate{

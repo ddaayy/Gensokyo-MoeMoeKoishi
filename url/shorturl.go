@@ -2,12 +2,13 @@ package url
 
 import (
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -32,10 +33,18 @@ const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 const length = 6
 
 func generateRandomString() string {
-	rand.Seed(time.Now().UnixNano())
+	// 使用 crypto/rand 生成更安全的随机短链接
+	idx := big.NewInt(0)
+	mod := big.NewInt(int64(len(charset)))
 	result := make([]byte, length)
 	for i := range result {
-		result[i] = charset[rand.Intn(len(charset))]
+		n, err := rand.Int(rand.Reader, mod)
+		if err != nil {
+			// 回退：使用时间戳哈希
+			return fmt.Sprintf("%x", time.Now().UnixNano())[:length]
+		}
+		idx = n
+		result[i] = charset[idx.Int64()]
 	}
 	return string(result)
 }

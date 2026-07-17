@@ -1,13 +1,48 @@
 package server
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/idmap"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
 )
+
+// IDMapAuthMiddleware 为 /getid 端点提供认证保护
+func IDMapAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		password := config.GetLotusPassword()
+		if password != "" {
+			// 有 Lotus password 时，使用 HMAC-SHA256 token 认证
+			token := c.Query("token")
+			if token == "" {
+				token = c.GetHeader("X-Token")
+			}
+			mac := hmac.New(sha256.New, []byte(password))
+			mac.Write([]byte(c.Request.URL.Path))
+			expected := hex.EncodeToString(mac.Sum(nil))
+			if token != expected {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+				c.Abort()
+				return
+			}
+		} else {
+			// 无密码时，仅允许本地回环地址访问
+			remoteIP := c.ClientIP()
+			if remoteIP != "127.0.0.1" && remoteIP != "::1" && remoteIP != "localhost" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "仅允许本地访问"})
+				c.Abort()
+				return
+			}
+		}
+		c.Next()
+	}
+}
 
 func GetIDHandler(c *gin.Context) {
 	idOrRow := c.Query("id")

@@ -20,8 +20,8 @@ import (
 
 func tryCOS(data []byte, filename string) (string, error) {
 	cfg := config.GetImageHostingCOS()
-	if !cfg.Enabled || cfg.SecretID == "" || cfg.SecretKey == "" || cfg.Bucket == "" || cfg.Region == "" {
-		return "", fmt.Errorf("COS 未配置或未启用")
+	if cfg.SecretID == "" || cfg.SecretKey == "" || cfg.Bucket == "" || cfg.Region == "" {
+		return "", fmt.Errorf("COS 未配置（请填写 secret_id / secret_key / region / bucket）")
 	}
 
 	ts := time.Now().Unix()
