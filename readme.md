@@ -343,23 +343,25 @@ settings:
   text_intent:                                       # 按需开启，错误 intent 会导致连接失败
     - "ATMessageEventHandler"                        # 频道 @ 消息
     - "DirectMessageHandler"                         # 频道私信
-    - "GroupATMessageEventHandler"                   # 群 @ 消息
-    - "GroupMessageEventHandler"                     # 群普通消息（需开放平台申请）
-    - "C2CMessageEventHandler"                       # 私聊（需开放平台申请）
     # - "ReadyHandler"                               # 连接成功
     # - "ErrorNotifyHandler"                         # 连接关闭
     # - "GuildEventHandler"                          # 频道事件
+    # - "MemberEventHandler"                         # 频道成员新增
+    # - "ChannelEventHandler"                        # 子频道事件
     # - "CreateMessageHandler"                       # 频道不 @ 消息（私域可用，公域会失败）
     # - "InteractionHandler"                         # 按钮回调事件
+    - "GroupATMessageEventHandler"                   # 群 @ 消息
+    - "GroupMessageEventHandler"                     # 群普通消息（需开放平台申请）
+    - "C2CMessageEventHandler"                       # 私聊（需开放平台申请）
     # - "ThreadEventHandler"                         # 频道发帖事件
     # - "FriendAddEventHandler"                      # 用户添加机器人
     # - "FriendDelEventHandler"                      # 用户删除机器人
+    # - "C2CMsgRejectHandler"                        # 用户拒绝 C2C 推送
+    # - "C2CMsgReceiveHandler"                       # 用户开启 C2C 推送
     # - "GroupAddRobotEventHandler"                  # 群聊机器人新增
     # - "GroupDelRobotEventHandler"                  # 群聊机器人删除
     # - "GroupMemberAddEventHandler"                 # 群成员新增
     # - "GroupMemberRemoveEventHandler"              # 群成员移除
-    # - "C2CMsgRejectHandler"                        # 用户拒绝 C2C 推送
-    # - "C2CMsgReceiveHandler"                       # 用户开启 C2C 推送
 
   #── 消息转换 ────────────────────────────────────────
   global_channel_to_group: true       # 频道转群事件
