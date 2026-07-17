@@ -85,6 +85,12 @@ NoneBot 以 koishi 数组段格式 `{"type":"file","data":{"file":"file:///..."}
 
 `local_file` / `base64_file` 经 `generateGroupMessage` 上传 CDN 后返回 `MessageToCreate`，但遍历 `foundItems` 时 `keyMap` 中没有这些 key，导致上传成功的文件不会被发送。已添加 `local_file`、`url_file`、`url_files`、`base64_file` 到 `keyMap`。
 
+### Markdown 消息中文本段的 [CQ:at] 未合并到 Markdown 内容
+
+**文件：** `handlers/send_group_msg.go`
+
+当后端以数组段格式发送 `[CQ:at]`（如 `{"type":"at","data":{"qq":"121777621"}}`）时，`[CQ:at,qq=数字]` 出现在 `messageText` 中而非 Markdown JSON 内部。但代码只从 `messageText` 中提取已转换后的 `<qqbot-at-user>` 标签，此时 `messageText` 中的 `[CQ:at]` 尚未经 `ResolveMarkdownAtMentions` 转换，`atTag` 始终为空，@ 标签丢失。已修复：在提取标签前对 `messageText` 也调用 `ResolveMarkdownAtMentions`，将 `[CQ:at]` 转换后再合并到 Markdown 内容头部。
+
 ---
 
 ## 📦 文件变更清单
