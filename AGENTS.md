@@ -18,7 +18,7 @@ Gensokyo-NewQQ 是一款兼容 [OneBot V11](https://github.com/botuniverse/onebo
 
 **这是本仓库最核心的 Agent 规范：**
 
-1. **每个独立用户请求或一次连续对话对应一次提交和一次 push。**
+1. **每个独立用户请求或一次连续对话对应一次 commit和一次 push。**
 2. 不要在单次对话中拆分成多个无意义的 commit；也不要把多个不相关请求塞进同一个 commit。
 3. Push 前必须完成该请求范围内的验证（编译检查、文档通读）。
 4. 如果用户明确要求分多次 commit，则按用户要求执行。
