@@ -270,6 +270,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			//增强配置
 			if !config.GetNativeOb11() {
 				groupMsg.RealMessageType = "group_private"
+				groupMsg.IsPrivate = true
 				groupMsg.IsBindedUserId = IsBindedUserId
 				groupMsg.RealUserID = data.Author.ID
 				groupMsg.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
@@ -410,6 +411,7 @@ func (p *Processors) ProcessC2CMessage(data *dto.WSC2CMessageData) error {
 			//增强配置
 			if !config.GetNativeOb11() {
 				groupMsg.RealMessageType = "group_private"
+				groupMsg.IsPrivate = true
 				groupMsg.RealUserID = data.Author.ID
 				groupMsg.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
 			}
