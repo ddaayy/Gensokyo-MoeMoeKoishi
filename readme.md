@@ -317,33 +317,87 @@ todo,正在施工...
 
 </details>
 
-## 配置示例
+## 完整配置示例
 
-首次运行会自动生成完整的 `config.yml`，以下为最小可用示例：
+> 全部配置项以首次运行自动生成的 `config.yml` 为准，以下为常见用法的完整示例：
 
 ```yaml
 version: 1
 settings:
-  # 你可以在 q.qq.com 的"应用详情"页面找到这些信息
-  app_id: 123456789                    # 应用 ID
+  #── 基础设置 ────────────────────────────────────────
+  app_id: 123456789                    # QQ 开放平台应用 ID
   token: "your_app_token"              # 应用令牌
   client_secret: "your_client_secret"  # 客户端密钥
+  uin: 0                               # 机器人 QQ 号（用于 use_uin）
+  use_uin: false                       # 使用 QQ 号作为 bot ID
 
-  # 至少选择一种连接方式
-  ws_address: ["ws://127.0.0.1:8080/onebot/v11/ws"]  # 反向 WS（常用）
+  #── 连接方式（至少启用一种）──────────────────────────
+  ws_address: ["ws://127.0.0.1:8080/onebot/v11/ws"]  # 反向 WS
   enable_ws_server: true                               # 正向 WS
+  ws_server_token: "12345"                             # 正向 WS token
   http_address: "0.0.0.0:5700"                         # HTTP API
+  http_access_token: ""                                # HTTP token
+  post_url: [""]                                       # 反向 HTTP POST
 
-  # 事件订阅（根据需要开启）
+  #── 事件订阅 ────────────────────────────────────────
   text_intent:
     - "GroupATMessageEventHandler"    # 群 @ 消息
-    - "GroupMessageEventHandler"      # 群普通消息
-    - "C2CMessageEventHandler"        # 私聊
+    - "GroupMessageEventHandler"      # 群普通消息（需申请）
+    - "C2CMessageEventHandler"        # 私聊（需申请）
+    - "GroupMemberAddEventHandler"    # 群成员新增
+    - "GroupMemberRemoveEventHandler" # 群成员移除
 
-  # 图床（以下免费图床只需 enabled: true）
-  image_hosting:
+  #── 消息转换 ────────────────────────────────────────
+  global_channel_to_group: true       # 频道转群事件
+  hash_id: true                       # 使用 hash 生成虚拟 ID
+  op_userid_type: "vuin"             # user_id 来源
+  array: false                        # segment 数组格式上报
+
+  #── Gensokyo 互联 ──────────────────────────────────
+  server_dir: "your_server_ip"        # 图床/互联地址
+  port: "15630"                       # HTTP 服务端口
+  lotus: false                        # Lotus 互联模式
+
+  #── WebUI ──────────────────────────────────────────
+  disable_webui: false
+  server_user_name: "admin"
+  server_user_password: "admin"
+
+  #── Markdown 消息 ──────────────────────────────────
+  twoway_echo: false                  # 双向 echo
+  custom_template_id: ""              # 图文转 MD 模板 ID
+  keyboard_id: ""                     # 图文转 MD 按钮 ID
+
+  #── 消息发送 ──────────────────────────────────────
+  lazy_message_id: false              # 惰性 message_id（主动推送用）
+  send_delay: 300                     # 发送间隔（毫秒）
+  no_ret_msg: false                   # 禁用回执（提升性能）
+
+  #── 指令控制 ──────────────────────────────────────
+  remove_prefix: false                # 忽略指令前 /
+  remove_at: false                    # 忽略指令前 @
+  bind_prefix: "/bind"
+  status_prefix: "/gskstatus"
+
+  #── 云存储 / 图床 ──────────────────────────────────
+  oss_type: 0                         # 0=本机 1=腾讯COS 2=百度 3=阿里
+  image_hosting:                      # 统一图床（按顺序尝试）
+    cos:
+      enabled: false
+      secret_id: ""                   # 腾讯云 API SecretId
+      secret_key: ""
+      region: "ap-guangzhou"
+      bucket: ""
+    bilibili:
+      enabled: false
+      csrf_token: ""                  # B站 bili_jct
+      sessdata: ""                    # B站 SESSDATA
+    qq_channel:
+      enabled: false
+      channel_id: ""
+      token: ""                       # Authorization 值
     chatglm:
-      enabled: true
+      enabled: true                   # 免费，开箱即用
     ukaka:
       enabled: true
     xingye:
@@ -352,7 +406,7 @@ settings:
       enabled: true
 ```
 
-> 完整配置项说明请参阅 [docs/开始使用.md](./docs/开始使用.md) 和 [docs/idmap.md](./docs/idmap.md)
+> 详细配置指南请参阅 [docs/开始使用.md](./docs/开始使用.md) 和 [docs/idmap.md](./docs/idmap.md)
 
 ## 关于 ISSUE
 
