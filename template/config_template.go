@@ -272,6 +272,33 @@ settings:
   a_OSS_AccessKeySecret : ""
   a_audit : false                   #是否审核图片 请先开通阿里云内容安全需企业认证。具体操作 请参见https://help.aliyun.com/document_detail/69806.html
 
+  #统一图床服务（按配置顺序依次尝试，第一个成功的返回URL）
+  image_hosting:
+    cos:                            #腾讯云COS（需配置secret_id/secret_key）
+      enabled: false
+      secret_id: ""                 #腾讯云 API SecretId
+      secret_key: ""                #腾讯云 API SecretKey
+      region: "ap-guangzhou"        #存储桶地域
+      bucket: ""                    #存储桶名称
+      domain: ""                    #自定义域名（留空使用COS默认域名）
+    bilibili:                       #B站图床（需配置Cookie）
+      enabled: false
+      csrf_token: ""                #B站bili_jct
+      sessdata: ""                  #B站SESSDATA
+      bucket: "openplatform"
+    qq_channel:                     #QQ频道图床（需channel_id+token）
+      enabled: false
+      channel_id: ""
+      token: ""                     #Authorization值，如"QQBot xxx.yyy"
+    chatglm:                        #智谱免费图床（开箱即用）
+      enabled: true
+    ukaka:                          #Ukaka免费图床（开箱即用）
+      enabled: true
+    xingye:                         #星野免费图床（开箱即用）
+      enabled: true
+    nature:                         #Nature腾讯COS直传（密钥内置，开箱即用）
+      enabled: true
+
 `
 const Logo = `
 '                                                                                                           
