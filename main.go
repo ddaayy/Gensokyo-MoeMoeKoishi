@@ -463,7 +463,7 @@ func main() {
 
 	uploadAuth := server.UploadAuthMiddleware()
 
-	  r.GET("/updateport", server.HandleIpupdate)
+	  r.GET("/updateport", uploadAuth, server.HandleIpupdate)
 	  r.POST("/delpic", uploadAuth, server.DeleteImageHandler(rateLimiter))
 	  r.GET("/healthz", HealthzHandler)
 	  r.GET("/readyz", HealthzHandler)
