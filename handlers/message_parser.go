@@ -80,7 +80,8 @@ func initPlatformPatterns() {
 // ---------- 安全工具函数 ----------
 
 // safeLocalPath 校验并安全化本地文件路径，防止路径穿越
-func safeLocalPath(filePath string) (string, error) {
+// baseDir 是允许访问的基础目录，返回的路径必须在 baseDir 内
+func safeLocalPath(filePath string, baseDir string) (string, error) {
 	// URL 解码（如 %E7%A5%9E → 神）
 	decoded, err := neturl.PathUnescape(filePath)
 	if err != nil {
@@ -96,6 +97,15 @@ func safeLocalPath(filePath string) (string, error) {
 	abs, err := filepath.Abs(clean)
 	if err != nil {
 		return "", fmt.Errorf("路径解析失败: %w", err)
+	}
+	// 获取基础目录的绝对路径
+	baseAbs, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", fmt.Errorf("基础目录解析失败: %w", err)
+	}
+	// 检查路径是否在基础目录内
+	if !strings.HasPrefix(abs, baseAbs) {
+		return "", fmt.Errorf("路径 %s 不在允许的基础目录 %s 内", abs, baseAbs)
 	}
 	return abs, nil
 }
@@ -713,7 +723,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 						cleanContent = strings.TrimPrefix(fileContent, "file://")
 					}
 					// 安全校验：防止路径穿越
-					safePath, err := safeLocalPath(cleanContent)
+					safePath, err := safeLocalPath(cleanContent, ".")
 					if err != nil {
 						mylog.Printf("安全校验失败，跳过本地图片: %v", err)
 						break
@@ -748,7 +758,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 						cleanContent = strings.TrimPrefix(fileContent, "file://")
 					}
 					// 安全校验：防止路径穿越
-					safePath, err := safeLocalPath(cleanContent)
+					safePath, err := safeLocalPath(cleanContent, ".")
 					if err != nil {
 						mylog.Printf("安全校验失败，跳过本地语音: %v", err)
 						break
@@ -884,7 +894,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 						cleanContent = decoded
 					}
 					// 安全校验：防止路径穿越
-					safePath, err := safeLocalPath(cleanContent)
+					safePath, err := safeLocalPath(cleanContent, ".")
 					if err != nil {
 						mylog.Printf("安全校验失败，跳过本地文件: %v", err)
 						break
@@ -966,7 +976,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 					cleanContent = strings.TrimPrefix(fileContent, "file://")
 				}
 				// 安全校验：防止路径穿越
-				safePath, err := safeLocalPath(cleanContent)
+				safePath, err := safeLocalPath(cleanContent, ".")
 				if err != nil {
 					mylog.Printf("安全校验失败，跳过本地图片: %v", err)
 					break
@@ -1001,7 +1011,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 					cleanContent = strings.TrimPrefix(fileContent, "file://")
 				}
 				// 安全校验：防止路径穿越
-				safePath, err := safeLocalPath(cleanContent)
+				safePath, err := safeLocalPath(cleanContent, ".")
 				if err != nil {
 					mylog.Printf("安全校验失败，跳过本地语音: %v", err)
 					break
@@ -1097,7 +1107,7 @@ func parseMessageContent(paramsMessage callapi.ParamsContent, message callapi.Ac
 					cleanContent = decoded
 				}
 				// 安全校验：防止路径穿越
-				safePath, err := safeLocalPath(cleanContent)
+				safePath, err := safeLocalPath(cleanContent, ".")
 				if err != nil {
 					mylog.Printf("安全校验失败，跳过本地文件: %v", err)
 					break
@@ -2146,7 +2156,7 @@ func ResolveMarkdownImages(content string, apiv2 openapi.OpenAPI) string {
 		}
 		localPath := strings.TrimPrefix(mediaPath, "file://")
 		// 安全校验：防止路径穿越
-		safePath, err := safeLocalPath(localPath)
+		safePath, err := safeLocalPath(localPath, ".")
 		if err != nil {
 			mylog.Printf("安全校验失败，跳过Markdown本地图片: %v", err)
 			return "", false

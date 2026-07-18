@@ -901,7 +901,7 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
 		// 安全校验：防止路径穿越
-		safePath, err := safeLocalPath(imageURLs[0])
+		safePath, err := safeLocalPath(imageURLs[0], ".")
 		if err != nil {
 			mylog.Printf("安全校验失败，跳过本地图片: %v", err)
 			return nil
@@ -951,7 +951,7 @@ func generateGroupMessage(id string, eventid string, foundItems map[string][]str
 	} else if RecordURLs, ok := foundItems["local_record"]; ok && len(RecordURLs) > 0 {
 		// 从本地路径读取语音
 		// 安全校验：防止路径穿越
-		safePath, err := safeLocalPath(RecordURLs[0])
+		safePath, err := safeLocalPath(RecordURLs[0], ".")
 		if err != nil {
 			mylog.Printf("安全校验失败，跳过本地语音: %v", err)
 			return nil
@@ -1421,7 +1421,7 @@ if isPrivateOrLoopback("https://" + recordURLs[0]) {
 	} else if fileURLs, ok := foundItems["local_file"]; ok && len(fileURLs) > 0 {
 		// 从本地路径读取文件
 		// 安全校验：防止路径穿越
-		safePath, err := safeLocalPath(fileURLs[0])
+		safePath, err := safeLocalPath(fileURLs[0], ".")
 		if err != nil {
 			mylog.Printf("安全校验失败，跳过本地文件: %v", err)
 			return nil
@@ -1565,7 +1565,7 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 	if imageURLs, ok := foundItems["local_image"]; ok && len(imageURLs) > 0 {
 		// 从本地路径读取图片
 		// 安全校验：防止路径穿越
-		safePath, err := safeLocalPath(imageURLs[0])
+		safePath, err := safeLocalPath(imageURLs[0], ".")
 		if err != nil {
 			mylog.Printf("安全校验失败，跳过本地图片: %v", err)
 			return nil
@@ -1615,7 +1615,7 @@ func generatePrivateMessage(id string, eventid string, foundItems map[string][]s
 	} else if RecordURLs, ok := foundItems["local_record"]; ok && len(RecordURLs) > 0 {
 		// 从本地路径读取语音
 		// 安全校验：防止路径穿越
-		safePath, err := safeLocalPath(RecordURLs[0])
+		safePath, err := safeLocalPath(RecordURLs[0], ".")
 		if err != nil {
 			mylog.Printf("安全校验失败，跳过本地语音: %v", err)
 			return nil
@@ -2087,7 +2087,7 @@ if isPrivateOrLoopback("https://" + recordURLs[0]) {
 	} else if fileURLs, ok := foundItems["local_file"]; ok && len(fileURLs) > 0 {
 		// 从本地路径读取文件
 		// 安全校验：防止路径穿越
-		safePath, err := safeLocalPath(fileURLs[0])
+		safePath, err := safeLocalPath(fileURLs[0], ".")
 		if err != nil {
 			mylog.Printf("安全校验失败，跳过本地文件: %v", err)
 			return nil
