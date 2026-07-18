@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"context"
-	"encoding/base64"
-	"io"
-	"net/http"
-	"os"
-	"strings"
-	"time"
+  "context"
+  "encoding/base64"
+  "fmt"
+  "io"
+  "net/http"
+  "os"
+  "strings"
+  "time"
 
 	"github.com/hoshinonyaruko/gensokyo/callapi"
 	"github.com/hoshinonyaruko/gensokyo/config"
@@ -590,8 +591,18 @@ func GenerateReplyMessage(id string, foundItems map[string][]string, messageText
 
 // downloadImageAndConvertToBase64 下载图片并转换为 base64 编码字符串
 func downloadImageAndConvertToBase64(url string) (string, error) {
+	// SSRF 校验：禁止访问私有地址、回环地址、链路本地地址
+	if isPrivateOrLoopback(url) {
+		return "", fmt.Errorf("SSRF 阻止: 目标地址为私有地址: %s", url)
+	}
+
+	// 设置带超时的 HTTP Client（30 秒超时）
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
 	// 发送 HTTP GET 请求以获取图片数据
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return "", err // 返回错误
 	}
