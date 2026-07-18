@@ -35,6 +35,16 @@ import (
 // 包级 HTTP 客户端，统一设置超时（30 秒），用于所有出站 HTTP 请求
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return fmt.Errorf("too many redirects")
+		}
+		// 每次重定向都重新校验目标地址，防止 302 绕过 SSRF 检查
+		if isPrivateOrLoopback(req.URL.String()) {
+			return fmt.Errorf("SSRF 阻止: 重定向目标为私有地址: %s", req.URL.String())
+		}
+		return nil
+	},
 }
 
 func init() {
