@@ -62,7 +62,7 @@ Gensokyo 新增 `[CQ:file]` CQ 码的完整支持：
 
 ### 群消息事件新增 `is_full_group_message` 字段
 
-`OnebotGroupMessage` 和 `OnebotGroupMessageS` 中新增 `is_full_group_message` 布尔字段，标识消息是否来自全量（非@）群聊通道。该字段仅在增强模式（`native_ob11: false`）下出现：
+`OnebotGroupMessage` 和 `OnebotGroupMessageS` 中新增 `is_full_group_message` 布尔字段，标识消息是否来自全量（非@）群聊通道：
 
 - `GROUP_MESSAGE_CREATE`（全量群聊）→ `true`
 - `GROUP_AT_MESSAGE_CREATE`（@机器人）→ 不出现（`false`，omitempty）

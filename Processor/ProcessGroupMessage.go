@@ -229,8 +229,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		    groupMsg.RealGroupID = data.GroupID
 		    groupMsg.RealUserID = data.Author.ID
 		    groupMsg.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
-		    groupMsg.IsFullGroupMessage = false
 		   }
+		   groupMsg.IsFullGroupMessage = false
 		//根据条件判断是否增加nick和card
 		var CaN = config.GetCardAndNick()
 		if CaN != "" {
@@ -325,8 +325,8 @@ func (p *Processors) ProcessGroupMessage(data *dto.WSGroupATMessageData) error {
 		    groupMsgS.RealGroupID = data.GroupID
 		    groupMsgS.RealUserID = data.Author.ID
 		    groupMsgS.Avatar, _ = GenerateAvatarURLV2(data.Author.ID)
-		    groupMsgS.IsFullGroupMessage = false
 		   }
+		   groupMsgS.IsFullGroupMessage = false
 		//根据条件判断是否增加nick和card
 		var CaN = config.GetCardAndNick()
 		if CaN != "" {
