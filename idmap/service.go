@@ -1,23 +1,26 @@
 package idmap
 
 import (
-	"bytes"
-	"context"
-	"crypto/md5"
-	"encoding/binary"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
+  "bytes"
+  "context"
+  "crypto/hmac"
+  "crypto/md5"
+  "crypto/sha256"
+  "encoding/binary"
+  "encoding/hex"
+  "encoding/json"
+  "errors"
+  "fmt"
+  "io"
+  "log"
+  "net/http"
+  "net/url"
+  "os"
+  "sort"
+  "strconv"
+  "strings"
+  "sync"
+  "time"
 
 	"github.com/hoshinonyaruko/gensokyo/config"
 	"github.com/hoshinonyaruko/gensokyo/mylog"
@@ -31,11 +34,62 @@ var (
 )
 
 var (
-	// 用于存储临时指令的全局变量
-	TemporaryCommands []string
-	// 用于保证线程安全的互斥锁
-	MutexT sync.Mutex
-)
+  // 用于存储临时指令的全局变量
+  TemporaryCommands []string
+  // 用于保证线程安全的互斥锁
+  MutexT sync.Mutex
+ )
+
+// buildGetIDURL 构建带 HMAC 认证和 timestamp 的 /getid URL
+// 当 lotus_password 配置为空时，不添加 token 和 timestamp 参数（兼容旧行为）
+func buildGetIDURL(baseURL string, params map[string]string) string {
+ password := config.GetLotusPassword()
+ if password == "" {
+  // 无密码时，直接返回 baseURL + 参数
+  values := url.Values{}
+  for k, v := range params {
+   values.Add(k, v)
+  }
+  return baseURL + "?" + values.Encode()
+ }
+
+ // 构建 query 参数，包含 timestamp
+ values := url.Values{}
+ for k, v := range params {
+  values.Add(k, v)
+ }
+ timestamp := time.Now().Unix()
+ values.Add("timestamp", strconv.FormatInt(timestamp, 10))
+
+ // 计算 HMAC-SHA256 签名
+ // 签名字符串：path + "?" + sorted params (不含 token) + "&timestamp=" + timestamp
+ paramKeys := make([]string, 0, len(values))
+ for k := range values {
+  paramKeys = append(paramKeys, k)
+ }
+ sort.Strings(paramKeys)
+
+ var paramParts []string
+ for _, k := range paramKeys {
+  for _, v := range values[k] {
+   paramParts = append(paramParts, k+"="+v)
+  }
+ }
+
+ signPayload := "/getid"
+ if len(paramParts) > 0 {
+  signPayload += "?" + strings.Join(paramParts, "&")
+ }
+
+ mac := hmac.New(sha256.New, []byte(password))
+ mac.Write([]byte(signPayload))
+ token := hex.EncodeToString(mac.Sum(nil))
+ values.Add("token", token)
+
+ u, _ := url.Parse(baseURL)
+ u.RawQuery = values.Encode()
+ return u.String()
+}
 
 // usernameCacheItem 存储用户名及其存入时间
 type usernameCacheItem struct {
