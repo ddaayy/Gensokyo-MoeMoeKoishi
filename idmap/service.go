@@ -270,6 +270,9 @@ func CompactionIdmap() {
 
 // Compaction 创建一个新的数据库文件并复制现有的数据到这个新文件中
 func Compaction(sourceDBPath, targetDBPath string) error {
+	if db == nil {
+		return fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	// 创建目标数据库文件
 	targetDB, err := bbolt.Open(targetDBPath, 0600, &bbolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
@@ -496,6 +499,9 @@ func StoreID(id string) (int64, error) {
 
 // 根据a储存b
 func StoreCache(id string) (int64, error) {
+	if db == nil {
+		return 0, fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	var newRow int64
 	key := uinKey(id)
 	revPrefix := uinRowKey("")
@@ -608,6 +614,9 @@ func SimplifiedStoreIDv2(id string) (int64, error) {
 
 // 群号 然后 用户号
 func StoreIDPro(id string, subid string) (int64, int64, error) {
+	if db == nil {
+		return 0, 0, fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	var newRowID, newSubRowID int64
 	var err error
 
@@ -877,6 +886,9 @@ func RetrieveRowByID(rowid string) (string, error) {
 
 // 根据b得到a
 func RetrieveRowByCache(rowid string) (string, error) {
+	if db == nil {
+		return "", fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	var id string
 	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(CacheBucketName))
@@ -962,6 +974,9 @@ func RetrieveRowByIDv2Pro(newRowID string, newSubRowID string) (string, string, 
 
 // 群号 还有用户号
 func RetrieveRowByIDPro(newRowID, newSubRowID string) (string, string, error) {
+	if db == nil {
+		return "", "", fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	var id, subid string
 
 	err := db.View(func(tx *bbolt.Tx) error {
@@ -1816,6 +1831,9 @@ func RetrieveVirtualValuev2Pro(realValue string, realValueSub string) (string, s
 
 // 根据2个真实值 获取2个虚拟值 群号 然后 用户号
 func RetrieveVirtualValuePro(realValue string, realValueSub string) (string, string, error) {
+	if db == nil {
+		return "", "", fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	var newRowID, newSubRowID string
 
 	err := db.View(func(tx *bbolt.Tx) error {
@@ -1951,6 +1969,9 @@ func RetrieveRealValuesv2Pro(virtualValue int64, virtualValueSub int64) (string,
 
 // UpdateVirtualValuePro 更新一对旧虚拟值到新虚拟值的映射 旧群号 新群号 旧用户 新用户
 func UpdateVirtualValuePro(oldVirtualValue1, newVirtualValue1, oldVirtualValue2, newVirtualValue2 int64) error {
+	if db == nil {
+		return fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	return db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 		// 构造旧和新的复合键
@@ -2064,6 +2085,9 @@ func FindKeysBySubAndType(sub string, typeSuffix string) ([]string, error) {
 
 // 取相同前缀下的所有key的:后边 比如取群成员列表
 func FindSubKeysById(id string) ([]string, error) {
+	if db == nil {
+		return nil, fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	var subKeys []string
 
 	err := db.View(func(tx *bbolt.Tx) error {
@@ -2155,6 +2179,9 @@ func FindSubKeysByIdPro(id string) ([]string, error) {
 
 // 场景: xxx:yyy zzz:bbb  zzz:bbb xxx:yyy 把xxx(id)替换为newID 比如更换群号(会卡住)
 func UpdateKeysWithNewID(id, newID string) error {
+	if db == nil {
+		return fmt.Errorf("旧数据库不存在: %s", DBName)
+	}
 	return db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(BucketName))
 		if b == nil {
