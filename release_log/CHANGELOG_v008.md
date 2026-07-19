@@ -239,6 +239,12 @@ string 格式（复古 CQ 码）中 `[CQ:video,file=base64://...]` 和 `[CQ:vide
 
 无前缀的图片/语音/文件 CQ 码（如 `[CQ:image,file=filename.png]`）被收集到 `unknown_*` 后没有任何消费逻辑，静默丢弃。已在 `generateGroupMessage` 和 `generatePrivateMessage` 中添加 fallback 处理，作为 URL 媒体尝试发送。
 
+### configAndUserInfoDB 新安装时返回 nil DB 导致 panic
+
+**文件：** `idmap/new_service.go`
+
+`configAndUserInfoDB()` 在迁移未完成时返回 `db`（旧版 bolt DB），但新安装时 `idmap.db` 不存在，`InitializeDB()` 设置 `db = nil`。后续 `ProcessC2CMessage` 调用 `StoreUserInfo` → `configAndUserInfoDB().Update(...)` 在 nil 上调用导致 panic。已修复：当 `db` 为 nil 时直接返回 `identityDB`。
+
 ---
 
 ## 🔧 配置变更
