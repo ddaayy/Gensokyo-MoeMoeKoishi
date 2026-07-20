@@ -113,12 +113,6 @@ Gensokyo 新增 `[CQ:file]` CQ 码的完整支持：
 
 `foundItems` 遍历时未跳过 `"active"` key，导致 `[CQ:active]` 标记被当作媒体类型发送，产生 `"Expected RichMediaMessage type for key active"` 错误。已添加 key 过滤。
 
-### NoneBot 插件 msg_text 截断
-
-**文件：** `active_msg/__init__.py`
-
-`handle_wakeup` 中 `on_command("唤醒")` 已将命令前缀剥离，但代码中仍使用 `text[len("唤醒"):].strip()` 再次裁剪，导致 `"唤醒 @target 123"` 的实际消息变为 `"3"`。已修复为直接使用 `text`。
-
 ### 富媒体消息 FileType 注释更新
 
 `botgo/dto/message_create.go` 中 `RichMediaMessage.FileType` 注释新增 `4 文件` 类型。
@@ -325,7 +319,6 @@ e7e14f4 fix: send_private_msg_wakeup异步处理避免超时
 45a36e8 fix: send_private_msg_wakeup遍历时跳过active key
 2061a3d fix: send_private_msg_wakeup纯[CQ:active]时发送空唤醒请求
 65f6bdd fix: send_private_msg_wakeup立即回送echo避免超时
-7c1bf5b fix: 恢复send_private_msg_wakeup同步模式+修复plugin msg_text截断bug
 51b00ca feat: CQ:file 文件上传支持+多个bug修复
 f63b86c feat: CQ:file 支持可选 file_name 参数
 e5e2d41 docs: 新增 CQ:file 标准CQ码文档
