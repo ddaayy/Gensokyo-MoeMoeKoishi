@@ -56,10 +56,6 @@ Gensokyo 新增 `[CQ:file]` CQ 码的完整支持：
 
 `config_template.go` 新增完整的 `image_hosting` 配置段，涵盖 7 种后端的示例字段。
 
-### 群消息事件新增 `is_private` 字段
-
-`Processor/ProcessC2CMessage.go` 中群消息事件上报新增 `is_private` 布尔字段，标识该消息是否来自群内私聊（`group_private`）场景，方便应用端区分。
-
 ### 群消息事件新增 `is_full_group_message` 字段
 
 `OnebotGroupMessage` 和 `OnebotGroupMessageS` 中新增 `is_full_group_message` 布尔字段，标识消息是否来自全量（非@）群聊通道：
@@ -303,8 +299,7 @@ string 格式（复古 CQ 码）中 `[CQ:video,file=base64://...]` 和 `[CQ:vide
 | `handlers/send_private_msg.go` | keyMap 补充文件类型 + RichMediaMessage 上传后文件名透传；回复消息补充 msg_id；keyMap 移除 embed；新增 unknown 类型 fallback |
 | `handlers/send_private_msg_wakeup.go` | 同步模式改造 + active key 跳过 + 空内容兜底；keyMap 移除 embed |
 | `handlers/send_guild_channel_msg.go` | 回复消息补充 msg_id |
-| `Processor/ProcessC2CMessage.go` | C2C 消息改为标准私聊格式上报；新增 `is_private` 字段 |
-| `Processor/Processor.go` | 新增 `is_private` 字段传递 |
+| `Processor/ProcessC2CMessage.go` | C2C 消息改为标准私聊格式上报 |
 | `url/shorturl.go` | 展平 image_hosting 配置适配 |
 | `server/getIDHandler.go` | 新增 |
 | `main.go` | 展平 image_hosting 配置适配 |
@@ -350,7 +345,6 @@ a549670 fix: 配置自动补全跳过已存在父块的子key
 b4e3dce feat: 展平 image_hosting 配置 + 安全修复 P0-P3 + AGENTS.md
 707464d 更新agents.md
 a061645 docs: 将图床配置块上移到对应云厂商配置旁
-aa370b5 feat: 群消息事件新增 is_private 字段标识私聊来源
 6f47fbd fix: C2C 消息改为标准 OneBot V11 私聊格式上报
 ceb2383 fix: 配置自动补全遗漏 bool/int 类型和 parent=settings 边界情况
 8fd955c fix: markdown 消息中 [CQ:at] 未转为 QQ @ 标签
