@@ -49,3 +49,18 @@ webui/dist/css/placeholder.css
 webui/dist/fonts/placeholder.txt
 webui/dist/icons/placeholder.txt
 webui/dist/js/placeholder.js
+
+# AI editors / assistant tooling (local only)
+.zcode/
+.atmocode/
+.aider*
+.cursor/
+.claude/
+.codeium/
+.continue/
+.tabnine/
+.github/copilot/
+.windsurf/
+.cody/
+.qwen/
+.digits/
