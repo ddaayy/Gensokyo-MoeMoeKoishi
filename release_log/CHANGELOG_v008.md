@@ -103,6 +103,15 @@ Gensokyo 新增 `[CQ:file]` CQ 码的完整支持：
 
 ## 🐛 Bug 修复
 
+### 仅含 `@bot` 的群消息被误判为黑白名单拦截
+
+**文件：** `Processor/ProcessGroupNormalMessage.go`、`handlers/message_parser.go`
+
+上一个修复（commit `0b73926`）在注册 bot 自身 OpenID 到 `selfAtIDs` 时，**额外用正则把 `<@OpenID>` 从 `data.Content` 中剥离**。当用户在群里只发送 `@bot` 而无其他文字时，content 剥离后只剩空格，`TrimSpace` 后变 `""`，被空内容检查误判为"被自定义黑白名单拦截"而丢弃——即使**未配置任何黑白名单**。
+
+- 移除 `ProcessGroupNormalMessage` 中的前置正则剥离，@ 格式转换统一交由 `RevertTransformedText` 处理，与 `GROUP_AT_MESSAGE_CREATE` 处理器保持一致。这样仅含 `@bot` 的消息仍能转换为 `[CQ:at,qq=...]`，产生非空 messageText 正常上报。
+- `resolveIncomingAtID` 中自身 @ 的返回值现在根据 `use_uin` 选择 UIN 或 AppID，与消息 `SelfID` 字段保持一致，避免下游因 `[CQ:at]` 的 qq 与 `self_id` 不匹配而无法识别 `@` 的是自己。
+
 ### 语音 URL 未正确重命名引起的潜在 panic
 
 **文件：** `handlers/send_group_msg.go`

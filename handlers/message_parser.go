@@ -151,6 +151,11 @@ func isSelfAtID(id string) bool {
 
 func resolveIncomingAtID(id string) (string, bool) {
 	if isSelfAtID(id) {
+		// 与消息 SelfID 字段保持一致：use_uin=true 时用 UIN，否则用 AppID。
+		// 否则下游会因 [CQ:at] 的 qq 与 self_id 不匹配而无法识别 @ 的是自己。
+		if config.GetUseUin() {
+			return config.GetUinStr(), true
+		}
 		if AppID != "" {
 			return AppID, true
 		}
