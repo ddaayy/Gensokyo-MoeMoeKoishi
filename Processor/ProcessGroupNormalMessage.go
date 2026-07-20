@@ -86,18 +86,22 @@ func (p *Processors) ProcessGroupNormalMessage(data *dto.WSGroupMessageData) err
 	}
 
 	// 前置兼容：遍历 Mentions 数组，移除 bot 自己的 <@OpenID> / <@!OpenID>
-	// QQ 平台在 GROUP_MESSAGE_CREATE 中使用 OpenID 格式标识被 @ 的用户，
-	// 与 handlers.BotID（来自 Ready 事件）不同，必须从 Mentions 中获取真实 ID。
-	toMe := false
-	for _, mention := range data.Mentions {
-		if mention.IsYou {
-			toMe = true
-			handlers.RememberSelfAtID(mention.ID)
-			reMention := regexp.MustCompile(`<@!?` + regexp.QuoteMeta(mention.ID) + `>`)
-			data.Content = reMention.ReplaceAllString(data.Content, "")
-			break
-		}
-	}
+	  // QQ 平台在 GROUP_MESSAGE_CREATE 中使用 OpenID 格式标识被 @ 的用户，
+	  // 与 handlers.BotID（来自 Ready 事件）不同，必须从 Mentions 中获取真实 ID。
+	  // 同时处理 bot:true 的提及：QQ API 的 is_you 可能不准确（如多实例场景），
+	  // 因此 bot:true 的 OpenID 也注册到 selfAtIDs，确保 RevertTransformedText 能识别。
+	  toMe := false
+	  for _, mention := range data.Mentions {
+	   if mention.IsYou || mention.Bot {
+	    if mention.IsYou {
+	     toMe = true
+	    }
+	    handlers.RememberSelfAtID(mention.ID)
+	    reMention := regexp.MustCompile(`<@!?` + regexp.QuoteMeta(mention.ID) + `>`)
+	    data.Content = reMention.ReplaceAllString(data.Content, "")
+	    break
+	   }
+	  }
 	// 非自身 @ 统一交给 RevertTransformedText / ConvertToSegmentedMessage 处理，避免陌生 OpenID 写入 idmap。
 	data.Content = strings.TrimSpace(data.Content)
 
